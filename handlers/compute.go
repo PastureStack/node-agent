@@ -3,15 +3,15 @@ package handlers
 import (
 	"strings"
 
+	"github.com/PastureStack/node-agent/core/compute"
+	"github.com/PastureStack/node-agent/core/marshaller"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	engineCli "github.com/docker/docker/client"
 	"github.com/mitchellh/mapstructure"
 	cache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/compute"
-	"github.com/rancher/agent/core/marshaller"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/utils"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/log"
@@ -89,7 +89,7 @@ func (h *ComputeHandler) InstanceForceStop(event *revents.Event, cli *client.Ran
 	if err != nil {
 		return errors.Wrap(err, constants.InstanceForceStopError+"failed to force stop container")
 	}
-	log.Infof("rancher id [%v]: Container with docker id [%v] has been deactivated", event.ResourceID, request.ID)
+	log.Infof("platform resource id [%v]: Container with docker id [%v] has been deactivated", event.ResourceID, request.ID)
 	return nil
 }
 
@@ -102,7 +102,7 @@ func (h *ComputeHandler) InstanceInspect(event *revents.Event, cli *client.Ranch
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return errors.Wrap(err, constants.InstanceInspectError+"failed to inspect instance")
 	}
-	log.Infof("rancher id [%v]: Container with docker id [%v] has been inspected", event.ResourceID, inspect.ID)
+	log.Infof("platform resource id [%v]: Container with docker id [%v] has been inspected", event.ResourceID, inspect.ID)
 	inspectJSON, err := marshaller.StructToMap(inspectResp)
 	if err != nil {
 		return errors.Wrap(err, constants.InstanceInspectError+"failed to marshall response data")
@@ -134,7 +134,7 @@ func (h *ComputeHandler) InstancePull(event *revents.Event, cli *client.RancherC
 	if pullErr != nil {
 		return errors.Wrap(pullErr, constants.InstancePullError+"failed to pull instance")
 	}
-	log.Infof("rancher id [%v]: Image with docker id [%v] has been pulled", event.ResourceID, inspect.ID)
+	log.Infof("platform resource id [%v]: Image with docker id [%v] has been pulled", event.ResourceID, inspect.ID)
 	return instancePullReply(event, cli, h.dockerClient)
 }
 

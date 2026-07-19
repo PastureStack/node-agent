@@ -7,7 +7,7 @@ import (
 	"net"
 	"net/url"
 
-	"github.com/rancher/agent/service/hostapi/auth"
+	"github.com/PastureStack/node-agent/service/hostapi/auth"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
 	"github.com/rancher/websocket-proxy/common"
@@ -31,7 +31,11 @@ func (s *Handler) Handle(key string, initialMessage string, incomingMessages <-c
 		return
 	}
 
-	console := token.Claims["console"].(map[string]interface{})
+	console, ok := auth.GetClaimMap(token, "console")
+	if !ok {
+		log.Errorf("Token missing console claim.")
+		return
+	}
 	container := console["container"].(string)
 
 	socketLoc := fmt.Sprintf(socketLocFmt, container)

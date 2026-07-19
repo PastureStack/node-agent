@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/pborman/uuid"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/rancher/websocket-proxy/common"
 )

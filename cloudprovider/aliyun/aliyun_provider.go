@@ -5,8 +5,8 @@ import (
 
 	"github.com/loganhz/aliyungo/metadata"
 
-	"github.com/rancher/agent/cloudprovider"
-	"github.com/rancher/agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/cloudprovider"
+	"github.com/PastureStack/node-agent/core/hostinfo"
 )
 
 const (

@@ -4,10 +4,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/PastureStack/node-agent/handlers"
+	"github.com/PastureStack/node-agent/service/hostapi"
+	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/handlers"
-	"github.com/rancher/agent/service/hostapi"
-	"github.com/rancher/agent/utilities/config"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/log"
 )

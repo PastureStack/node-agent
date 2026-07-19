@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/pkg/tlsconfig"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -22,6 +21,7 @@ import (
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor"
 	"github.com/rancher/websocket-proxy/proxy/proxyprotocol"
 	proxyTls "github.com/rancher/websocket-proxy/proxy/tls"
+	log "github.com/sirupsen/logrus"
 )
 
 var slashRegex = regexp.MustCompile("[/]{2,}")

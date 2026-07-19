@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/rancher/agent/core/progress"
-	"github.com/rancher/agent/utilities/config"
-	"github.com/rancher/agent/utilities/utils"
+	"github.com/PastureStack/node-agent/core/progress"
+	"github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 	"os"

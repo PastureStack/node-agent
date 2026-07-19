@@ -1,14 +1,15 @@
-//+build !windows
+//go:build !windows
+// +build !windows
 
 package utils
 
 import (
 	"context"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/patrickmn/go-cache"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/docker"
 	"gopkg.in/check.v1"
 	"testing"
 	"time"
@@ -30,7 +31,8 @@ func (s *UtilTestSuite) SetUpSuite(c *check.C) {
 func (s *UtilTestSuite) TestGetIP(c *check.C) {
 	client := docker.GetClient(docker.DefaultVersion)
 	config := container.Config{
-		Image: "ibuildthecloud/helloworld:latest",
+		Image: "busybox:1",
+		Cmd:   []string{"sleep", "60"},
 		Labels: map[string]string{
 			constants.UUIDLabel: "c861f990-4472-4fa1-960f-65171b544c29",
 			cniLabels:           "true",
@@ -41,6 +43,10 @@ func (s *UtilTestSuite) TestGetIP(c *check.C) {
 	if err != nil {
 		c.Fatal(err)
 	}
+	defer client.ContainerRemove(context.Background(), resp.ID, types.ContainerRemoveOptions{
+		Force:         true,
+		RemoveVolumes: true,
+	})
 
 	err = client.ContainerStart(context.Background(), resp.ID, types.ContainerStartOptions{})
 	if err != nil {
@@ -56,5 +62,5 @@ func (s *UtilTestSuite) TestGetIP(c *check.C) {
 	if err != nil {
 		c.Fatal(err)
 	}
-	c.Assert(ip, check.Equals, inspect.NetworkSettings.IPAddress)
+	c.Assert(ip, check.Equals, getDockerNetworkIP(inspect))
 }

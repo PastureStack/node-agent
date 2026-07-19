@@ -18,18 +18,35 @@ cleanup()
 }
 
 check()
-{   
-    if grep -E -q '^nameserver 127.*.*.*|^nameserver localhost|^nameserver ::1' /etc/resolv.conf; then
+{
+    local host_resolv="/etc/resolv.conf"
+    local resolved_resolv="/run/systemd/resolve/resolv.conf"
+    local resolved_content
+
+    if grep -E -q '^nameserver 127.*.*.*|^nameserver localhost|^nameserver ::1' "${host_resolv}"; then
+        if [ -e "${resolved_resolv}" ]; then
+            resolved_content="$(cat "${resolved_resolv}")"
+        elif [ -e /host/proc/1/ns/mnt ] && command -v nsenter >/dev/null 2>&1; then
+            resolved_content="$(nsenter --mount=/host/proc/1/ns/mnt -- cat "${resolved_resolv}" 2>/dev/null || true)"
+        fi
+
+        if echo "${resolved_content}" | grep -E -q '^nameserver ' && \
+           ! echo "${resolved_content}" | grep -E -q '^nameserver 127.*.*.*|^nameserver localhost|^nameserver ::1'; then
+            info "DNS Checking detected systemd-resolved stub in ${host_resolv}; using ${resolved_resolv} as the real upstream DNS source"
+            return 0
+        fi
+
         error DNS Checking loopback IP address 127.0.0.0/8, localhost or ::1 configured as the DNS server on the host file /etc/resolv.conf, can’t accept it
         exit 1
     fi
 }
 
-source ${CATTLE_HOME:-/var/lib/cattle}/common/scripts.sh
+PLATFORM_HOME=${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}
+source ${PLATFORM_HOME}/common/scripts.sh
 
-DEST=$CATTLE_HOME/pyagent
-MAIN=$DEST/agent
-STAMP=$CATTLE_HOME/.pyagent-stamp
+DEST=$PLATFORM_HOME/node-agent
+MAIN=$DEST/node-agent
+STAMP=$PLATFORM_HOME/.node-agent-stamp
 OLD=$(mktemp -d ${DEST}.XXXXXXXX)
 TEMP=$(mktemp -d ${DEST}.XXXXXXXX)
 
@@ -44,7 +61,7 @@ stage()
         cat ./dist/websocket/cacert.orig ${CURL_CA_BUNDLE} > ./dist/websocket/cacert.pem
     fi
 
-    cp -rf apply.sh bin/agent $TEMP
+    cp -rf apply.sh bin/node-agent $TEMP
 
     find $TEMP -name "*.sh" -exec chmod +x {} \;
     find $TEMP \( -name host-api -o -name cadvisor -o -name nsenter -o -name socat \) -exec chmod +x {} \;
@@ -61,7 +78,8 @@ stage()
 
 conf()
 {
-    CONF=(${CATTLE_HOME}/pyagent/agent.conf
+    CONF=(${PLATFORM_HOME}/node-agent/agent.conf
+          ${CATTLE_HOME:-/var/lib/cattle}/pyagent/agent.conf
           /etc/cattle/agent/agent.conf
           ${CATTLE_HOME}/etc/cattle/agent/agent.conf
           /var/lib/rancher/etc/agent.conf)
@@ -76,7 +94,7 @@ conf()
 
 
 start(){
-    export PATH=${CATTLE_HOME}/bin:$PATH
+    export PATH=${PLATFORM_HOME}/bin:$PATH
 
     if [ "${CATTLE_CHECK_NAMESERVER}" = "false" ];then
         info Skipping DNS nameserver check
@@ -93,7 +111,7 @@ start(){
     info Executing $MAIN
     cleanup
 
-    $CATTLE_HOME/config.sh host-config
+    ${PLATFORM_HOME}/config.sh host-config
 
     exec $MAIN
 }

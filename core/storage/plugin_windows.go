@@ -1,10 +1,10 @@
 package storage
 
 import (
-	"github.com/rancher/agent/model"
+	"github.com/PastureStack/node-agent/model"
 )
 
-// callRancherStorageVolumeAttach is not supported on windows
-func CallRancherStorageVolumePlugin(volume model.Volume, action string, payload interface{}) (Response, error) {
+// Platform storage volume attachment is not supported on Windows.
+func CallPlatformStorageVolumePlugin(volume model.Volume, action string, payload interface{}) (Response, error) {
 	return Response{}, nil
 }

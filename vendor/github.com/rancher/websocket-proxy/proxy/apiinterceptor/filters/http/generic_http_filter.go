@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor/filters"
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor/model"
+	log "github.com/sirupsen/logrus"
 )
 
 const (

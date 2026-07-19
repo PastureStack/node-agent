@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PastureStack/node-agent/service/hostapi/config"
+	"github.com/PastureStack/node-agent/service/hostapi/events"
+	"github.com/PastureStack/node-agent/service/hostapi/testutils"
 	"github.com/docker/distribution/context"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/gorilla/websocket"
-	"github.com/rancher/agent/service/hostapi/config"
-	"github.com/rancher/agent/service/hostapi/events"
-	"github.com/rancher/agent/service/hostapi/testutils"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
 	"github.com/rancher/websocket-proxy/proxy"
@@ -209,7 +209,7 @@ func setupWebsocketProxy() {
 		Config: conf,
 	}
 
-	log.Infof("Starting websocket proxy. Listening on [%s], Proxying to cattle API at [%s].",
+	log.Infof("Starting websocket proxy. Listening on [%s], proxying to the control-platform API at [%s].",
 		conf.ListenAddr, conf.CattleAddr)
 
 	go p.StartProxy()

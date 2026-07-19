@@ -1,3 +1,4 @@
+//go:build linux || freebsd || solaris || openbsd || darwin
 // +build linux freebsd solaris openbsd darwin
 
 package storage
@@ -12,9 +13,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/PastureStack/node-agent/model"
 	"github.com/docker/go-connections/sockets"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/model"
 	"github.com/rancher/log"
 )
 
@@ -33,7 +34,7 @@ func (t *transportStore) add(driver string) {
 	defer t.lock.Unlock()
 	if _, ok := t.clientMap[driver]; !ok {
 		transport := new(http.Transport)
-		sockets.ConfigureTransport(transport, "unix", filepath.Join(rancherSockDir, driver+".sock"))
+		sockets.ConfigureTransport(transport, "unix", filepath.Join(legacyStorageSockDir, driver+".sock"))
 		t.clientMap[driver] = &http.Client{
 			Transport: transport,
 		}
@@ -46,7 +47,7 @@ func (t *transportStore) get(driver string) *http.Client {
 	return t.clientMap[driver]
 }
 
-func CallRancherStorageVolumePlugin(volume model.Volume, action string, payload interface{}) (Response, error) {
+func CallPlatformStorageVolumePlugin(volume model.Volume, action string, payload interface{}) (Response, error) {
 	if transportMap.get(volume.Data.Fields.Driver) == nil {
 		transportMap.add(volume.Data.Fields.Driver)
 	}

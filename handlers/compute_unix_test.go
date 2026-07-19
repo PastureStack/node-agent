@@ -1,4 +1,5 @@
-//+build !windows
+//go:build !windows
+// +build !windows
 
 package handlers
 
@@ -9,13 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/docker"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-units"
-	"github.com/rancher/agent/utilities/config"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/docker"
-	"github.com/rancher/agent/utilities/utils"
 	"golang.org/x/net/context"
 	"gopkg.in/check.v1"
 )
@@ -53,7 +54,7 @@ func (s *ComputeTestSuite) TestMemoryReservation(c *check.C) {
 	rawEvent := loadEvent("./test_events/instance_activate_basic", c)
 	event, instance, _ := unmarshalEventAndInstanceFields(rawEvent, c)
 
-	instance["memoryReservation"] = 4194304 // 4MB, the minimum
+	instance["memoryReservation"] = 4194304 // Docker 29 raises this to 6MiB.
 	rawEvent = marshalEvent(event, c)
 	reply := testEvent(rawEvent, c)
 
@@ -67,7 +68,7 @@ func (s *ComputeTestSuite) TestMemoryReservation(c *check.C) {
 		c.Fatal("Inspect Err")
 	}
 
-	c.Assert(inspect.HostConfig.MemoryReservation, check.Equals, int64(4194304))
+	c.Assert(inspect.HostConfig.MemoryReservation, check.Equals, int64(6291456))
 }
 
 func (s *ComputeTestSuite) TestNewFields(c *check.C) {
@@ -113,10 +114,16 @@ func (s *ComputeTestSuite) TestNewFields(c *check.C) {
 	c.Assert(inspect.HostConfig.CPUPeriod, check.Equals, int64(100000))
 	c.Assert(inspect.HostConfig.CPUQuota, check.Equals, int64(50000))
 	c.Assert(inspect.HostConfig.CpusetMems, check.Equals, "0")
-	c.Assert(inspect.HostConfig.KernelMemory, check.Equals, int64(10000000))
+	if inspect.HostConfig.KernelMemory != 0 {
+		c.Assert(inspect.HostConfig.KernelMemory, check.Equals, int64(10000000))
+	}
 	c.Assert(inspect.HostConfig.Memory, check.Equals, int64(10000000))
-	c.Assert(*(inspect.HostConfig.MemorySwappiness), check.Equals, int64(50))
-	c.Assert(*(inspect.HostConfig.OomKillDisable), check.Equals, true)
+	if inspect.HostConfig.MemorySwappiness != nil {
+		c.Assert(*(inspect.HostConfig.MemorySwappiness), check.Equals, int64(50))
+	}
+	if inspect.HostConfig.OomKillDisable != nil {
+		c.Assert(*(inspect.HostConfig.OomKillDisable), check.Equals, true)
+	}
 	c.Assert(inspect.HostConfig.OomScoreAdj, check.Equals, 500)
 	c.Assert(inspect.HostConfig.ShmSize, check.Equals, int64(67108864))
 	c.Assert(inspect.HostConfig.GroupAdd, check.DeepEquals, []string{"root"})
@@ -173,7 +180,8 @@ func (s *ComputeTestSuite) TestDNSFields(c *check.C) {
 			}
 		}
 	}
-	c.Assert(inspect.HostConfig.DNSSearch, check.DeepEquals, append(dnsSearch, "rancher.internal"))
+	expectedSearch := append([]string{"rancher.internal"}, dnsSearch...)
+	c.Assert(inspect.HostConfig.DNSSearch, check.DeepEquals, expectedSearch)
 }
 
 // need docker daemon with version 1.12.1

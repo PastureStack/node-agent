@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"fmt"
+	"github.com/PastureStack/node-agent/utilities/docker"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/api/types"
 	con "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/rancher/agent/utilities/docker"
-	"github.com/rancher/agent/utilities/utils"
 	"golang.org/x/net/context"
 	"gopkg.in/check.v1"
 )

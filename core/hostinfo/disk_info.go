@@ -1,8 +1,8 @@
 package hostinfo
 
 import (
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/utils"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/shirou/gopsutil/disk"
 	"math"
 	"strings"

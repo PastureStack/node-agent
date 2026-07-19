@@ -2,12 +2,14 @@ package utils
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/utilities/config"
-	"github.com/rancher/agent/utilities/constants"
 	revents "github.com/rancher/event-subscriber/events"
 	"golang.org/x/net/context"
 )
@@ -94,6 +96,7 @@ func getInstanceHostMapData(event *revents.Event, client *client.Client, cache *
 	if err != nil {
 		return map[string]interface{}{}, errors.Wrap(err, constants.GetInstanceHostMapDataError+"failed to inspect container")
 	}
+	normalizeInspectForLegacyAPI(&inspect)
 	dockerMounts, err = getMountData(container.ID, client)
 	if err != nil {
 		return map[string]interface{}{}, errors.Wrap(err, constants.GetInstanceHostMapDataError+"failed to get mount data")
@@ -108,6 +111,9 @@ func getInstanceHostMapData(event *revents.Event, client *client.Client, cache *
 	}
 	if container.Ports != nil && len(container.Ports) > 0 {
 		for _, port := range container.Ports {
+			if strings.Contains(port.IP, ":") {
+				continue
+			}
 			privatePort := fmt.Sprintf("%v/%v", port.PrivatePort, port.Type)
 			portSpec := privatePort
 			bindAddr := ""
@@ -158,6 +164,29 @@ func getInstanceHostMapData(event *revents.Event, client *client.Client, cache *
 		dataMap["dockerMounts"] = dockerMounts
 	}
 	return update, nil
+}
+
+func normalizeInspectForLegacyAPI(inspect *types.ContainerJSON) {
+	if inspect == nil || inspect.Config == nil {
+		return
+	}
+	macAddress := inspect.Config.Labels[constants.PlatformMacLabel]
+	if macAddress == "" || isContainerNetworkMode(inspect) {
+		return
+	}
+	if inspect.Config.MacAddress == "" {
+		inspect.Config.MacAddress = macAddress
+	}
+	if inspect.NetworkSettings != nil && inspect.NetworkSettings.MacAddress == "" {
+		inspect.NetworkSettings.MacAddress = macAddress
+	}
+}
+
+func isContainerNetworkMode(inspect *types.ContainerJSON) bool {
+	if inspect.HostConfig == nil {
+		return false
+	}
+	return strings.HasPrefix(string(inspect.HostConfig.NetworkMode), "container:")
 }
 
 func getMountData(containerID string, client *client.Client) ([]types.MountPoint, error) {

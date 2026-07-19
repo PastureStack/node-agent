@@ -1,7 +1,7 @@
 package auth
 
 import (
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/context"
 	"net/http"
 )

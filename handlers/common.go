@@ -5,13 +5,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/PastureStack/node-agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/docker/docker/api/types"
 	goUUID "github.com/nu7hatch/gouuid"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/hostinfo"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/docker"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/log"
@@ -103,7 +103,6 @@ func initializeHandlers() *Handler {
 	if err != nil {
 		log.Errorf("Err: %v. Can not initialize docker client. Exiting go-agent", err)
 	}
-	clientWithTimeout.UpdateClientVersion(docker.DefaultVersion)
 	info := types.Info{}
 	version := types.Version{}
 	flags := [2]bool{}

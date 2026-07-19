@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
@@ -23,11 +23,11 @@ import (
 // credits for https://github.com/docker/docker/blob/5c1826ec4de381df9f739ce0de28e37d4f734d47/cmd/dockerd/service_windows.go
 
 const (
-	ServiceName      = "rancher-agent"
-	logFile          = "C:/ProgramData/rancher/agent.log"
-	rancherPanicFile = "C:/ProgramData/rancher/panic.log"
-	homeDir          = "C:/ProgramData/rancher"
-	restartCommand   = `"powershell.exe" -File "c:\program files\rancher\crash-loop.ps1" agent`
+	ServiceName       = "pasturestack-node-agent"
+	logFile           = "C:/ProgramData/PastureStack/node-agent.log"
+	platformPanicFile = "C:/ProgramData/PastureStack/panic.log"
+	homeDir           = "C:/ProgramData/PastureStack"
+	restartCommand    = `"powershell.exe" -File "c:\program files\PastureStack\crash-loop.ps1" node-agent`
 	// These should match the values in event_messages.mc.
 	eventInfo  = 1
 	eventWarn  = 1
@@ -162,7 +162,7 @@ func registerService(url string) error {
 		ServiceType:  windows.SERVICE_WIN32_OWN_PROCESS,
 		StartType:    mgr.StartAutomatic,
 		ErrorControl: mgr.ErrorNormal,
-		DisplayName:  "Rancher Agent",
+		DisplayName:  "PastureStack Node Agent",
 	}
 
 	// Configure the service to launch with the arguments that were just passed.
@@ -315,7 +315,7 @@ func initService(register string, unregister bool) error {
 }
 
 func (h *handler) started() error {
-	err := initPanicFile(rancherPanicFile)
+	err := initPanicFile(platformPanicFile)
 	if err != nil {
 		return err
 	}
@@ -371,7 +371,7 @@ Loop:
 
 func initPanicFile(path string) error {
 	var err error
-	_, err = os.Create(rancherPanicFile)
+	_, err = os.Create(platformPanicFile)
 	if err != nil {
 		return err
 	}

@@ -1,28 +1,36 @@
-agent
-========
+# PastureStack Node Agent
 
-This agent runs on compute nodes in a Rancher cluster. It receives events from the Rancher server, acts upon them, and returns response events.
+Node Agent receives control-platform events on compute nodes, executes the corresponding container, storage, host, and configuration operations, and publishes compatible replies.
 
-## Building
+PastureStack is an independent community effort to preserve, audit, and modernize the Rancher 1.6 ecosystem. It is not affiliated with or endorsed by Rancher Labs or SUSE.
 
-`make`
+**Upstream:** [`rancher/agent`](https://github.com/rancher/agent). This GitHub fork preserves upstream history, authorship, dates, tags, licenses, and bundled dependency notices; PastureStack maintenance is consolidated into one commit after the preserved upstream boundary.
 
+## Project status
 
-## Running
+This is a migration proof of concept. The existing Ubuntu 26.04, Go 1.26.5, modern Docker test harness, runtime hardening, and dependency maintenance are retained. Product-owned import paths, binaries, archives, images, Windows service names, and operator messages use PastureStack naming. Python test dependencies are fully pinned and cached in the disposable build image so clean-checkout tests do not depend on live PyPI availability. Release packaging is manual; no CI/CD or automatic production deployment is enabled.
 
-`./bin/agent`
+## Configuration
 
-## License
-Copyright (c) 2014-2016 [Rancher Labs, Inc.](http://rancher.com)
+Preferred settings are `PLATFORM_URL`, `PLATFORM_ACCESS_KEY`, `PLATFORM_SECRET_KEY`, `PASTURESTACK_HOME`, and `PASTURESTACK_LOCALE`. The locale accepts `en-US` and `zh-TW`. Historical `CATTLE_*` settings are temporary compatibility aliases for established event and bootstrap contracts.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+## Build and test
 
-[http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
+From a Docker-capable Linux host:
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+```sh
+make test
+make build
+make package
+make package-image IMAGE_NAME=pasturestack/node-agent TAG=poc
+```
+
+Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
+
+For the reviewed `0.13.21` compatibility release, `VERSION_OVERRIDE=v0.13.21 CROSS=1 make package` produces the deterministic flat assets `node-agent-0.13.21.tar.gz` and `node-agent-0.13.21-windows-amd64.zip`. PastureStack Server serves both from its matching GitHub Release and verifies their SHA-256 entries before use; operators do not need an artifact mirror. The Windows ZIP uses the neutral `pasturestack/` include layout. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported.
+
+The test harness starts a disposable inner Docker daemon and generates its BusyBox image, build contexts, and Git fixtures locally. It does not mount the host Docker socket or depend on mutable registry images and retired external test endpoints.
+
+## License and attribution
+
+The inherited project remains licensed under [Apache License 2.0](LICENSE). Copyright and attribution for inherited work and vendored dependencies remain with their respective authors and contributors. PastureStack contributors claim authorship only for their own changes.

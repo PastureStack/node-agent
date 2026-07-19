@@ -1,4 +1,5 @@
-//+build !windows
+//go:build !windows
+// +build !windows
 
 package config
 
@@ -7,8 +8,8 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/PastureStack/node-agent/utilities/constants"
 	gofqdn "github.com/ShowMax/go-fqdn"
-	"github.com/rancher/agent/utilities/constants"
 )
 
 // Hook up gocheck into the "go test" runner.

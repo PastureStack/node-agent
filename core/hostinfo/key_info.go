@@ -9,8 +9,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/utilities/config"
 	"github.com/rancher/log"
 )
 

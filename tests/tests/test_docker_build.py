@@ -1,6 +1,59 @@
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+import io
+import subprocess
+import tarfile
+import threading
+
+import pytest
+
 from tests.common import delete_container, JsonObject, \
     instance_activate_common_validation, event_test
-from tests.cattle.utils import random_string
+from tests.platformcompat.utils import random_string
+
+
+@pytest.fixture(scope='module')
+def build_context_urls(tmp_path_factory):
+    root = tmp_path_factory.mktemp('build-contexts')
+    source = root / 'source'
+    source.mkdir()
+    dockerfile = (
+        b'FROM busybox:1\n'
+        b'RUN echo pasturestack-fixture > /fixture.txt\n'
+    )
+    (source / 'Dockerfile').write_bytes(dockerfile)
+
+    subprocess.check_call(['git', 'init', str(source)])
+    subprocess.check_call(['git', '-C', str(source), 'config',
+                           'user.name', 'PastureStack Test'])
+    subprocess.check_call(['git', '-C', str(source), 'config',
+                           'user.email', 'test@example.invalid'])
+    subprocess.check_call(['git', '-C', str(source), 'add', 'Dockerfile'])
+    subprocess.check_call(['git', '-C', str(source), 'commit', '-m',
+                           'Add deterministic build fixture'])
+    bare = root / 'tiny-build.git'
+    subprocess.check_call(['git', 'clone', '--bare', str(source), str(bare)])
+    subprocess.check_call(['git', '-C', str(bare), 'update-server-info'])
+
+    tar_path = root / 'build.tar'
+    info = tarfile.TarInfo('Dockerfile')
+    info.size = len(dockerfile)
+    info.mode = 0o644
+    info.mtime = 0
+    with tarfile.open(str(tar_path), 'w') as archive:
+        archive.addfile(info, io.BytesIO(dockerfile))
+
+    handler = partial(SimpleHTTPRequestHandler, directory=str(root))
+    server = ThreadingHTTPServer(('127.0.0.1', 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        base = 'http://127.0.0.1:%d' % server.server_port
+        yield base + '/tiny-build.git', base + '/build.tar'
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
 
 
 def _test_docker_build_from_remote(agent, remote=None,
@@ -39,18 +92,11 @@ def _test_docker_build_from_remote(agent, remote=None,
     delete_container('/c861f990-4472-4fa1-960f-65171b544c28')
 
 
-def test_docker_build_from_github(agent):
-    remotes = [
-        'github.com/rancherio/tiny-build',
-        'git://github.com/rancherio/tiny-build',
-        'git://github.com/rancherio/tiny-build.git',
-        'git@github.com:rancherio/tiny-build.git',
-    ]
-
-    for remote in remotes:
-        _test_docker_build_from_remote(agent, remote)
+def test_docker_build_from_git(agent, build_context_urls):
+    remote, _ = build_context_urls
+    _test_docker_build_from_remote(agent, remote)
 
 
-def test_docker_build_from_context(agent):
-    url = 'https://github.com/rancherio/tiny-build/raw/master/build.tar'
+def test_docker_build_from_context(agent, build_context_urls):
+    _, url = build_context_urls
     _test_docker_build_from_remote(agent, context=url)

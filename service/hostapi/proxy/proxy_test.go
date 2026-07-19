@@ -3,6 +3,7 @@ package proxy
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"testing"
 
@@ -66,7 +67,9 @@ func marshal(c *C, obj interface{}) string {
 }
 
 func (s *ProxyTestSuite) SetUpSuite(c *C) {
-	go http.ListenAndServe(host, http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	listener, err := net.Listen("tcp", host)
+	c.Assert(err, IsNil)
+	go http.Serve(listener, http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		bytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)

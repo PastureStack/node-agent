@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PastureStack/node-agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/hostinfo"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/config"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/utils"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/log"
 	"github.com/shirou/gopsutil/disk"
@@ -52,7 +52,7 @@ func addResource(ping *revents.Event, pong *model.PingResponse, dockerClient *cl
 	if err != nil {
 		log.Warnf("Failed to get Host Labels err msg: %v", err.Error())
 	}
-	rancherImage := os.Getenv(agentImage)
+	agentImageValue := os.Getenv(agentImage)
 	createLabels := config.Labels()
 	if os.Getenv(ipset) != "" {
 		createLabels[ipLabel] = os.Getenv(ipset)
@@ -60,7 +60,7 @@ func addResource(ping *revents.Event, pong *model.PingResponse, dockerClient *cl
 	if os.Getenv(requireAny) != "" {
 		createLabels[requireAnyLabel] = os.Getenv(requireAny)
 	}
-	labels[constants.RancherAgentImage] = rancherImage
+	labels[constants.LegacyAgentImageLabel] = agentImageValue
 	uuid, err := config.DockerUUID()
 	if err != nil {
 		return errors.Wrap(err, constants.AddResourceError+"failed to get docker UUID")

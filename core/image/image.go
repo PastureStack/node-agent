@@ -7,18 +7,18 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/PastureStack/node-agent/utilities/docker"
 	engineCli "github.com/docker/docker/client"
-	"github.com/rancher/agent/utilities/docker"
 
+	"github.com/PastureStack/node-agent/core/marshaller"
+	"github.com/PastureStack/node-agent/core/progress"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/marshaller"
-	"github.com/rancher/agent/core/progress"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/config"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/utils"
 	"golang.org/x/net/context"
 	"os"
 	"strings"
@@ -36,6 +36,16 @@ func DoImageActivate(image model.Image, storagePool model.StoragePool, progress 
 	imageName := utils.ParseRepoTag(imageUUID)
 	if isBuild(image) {
 		return imageBuild(image, progress, client)
+	}
+	if imageName != "" {
+		if _, _, err := client.ImageInspectWithRaw(context.Background(), imageName); err == nil {
+			if progress != nil {
+				progress.Update("Image already exists locally", "yes", nil)
+			}
+			return nil
+		} else if !engineCli.IsErrImageNotFound(err) {
+			return errors.Wrap(err, constants.IsImageActiveError)
+		}
 	}
 	rc := image.RegistryCredential
 	auth := types.AuthConfig{
@@ -126,20 +136,20 @@ func imageBuild(image model.Image, progress *progress.Progress, dockerClient *cl
 
 	if opts.Context != "" {
 		file, err := utils.DownloadFile(opts.Context, config.Builds(), nil, "")
-		if err == nil {
-			opts.FileObj = file
-			if buildErr := doBuild(opts, progress, dockerClient); buildErr != nil {
-				return errors.Wrap(buildErr, constants.ImageBuildError+"failed to build image")
-			}
-		}
 		if file != "" {
-			// ignore this error because we don't care if that file doesn't exist
-			os.Remove(file)
+			defer os.Remove(file)
+		}
+		if err != nil {
+			return errors.Wrap(err, constants.ImageBuildError+"failed to download build context")
+		}
+		opts.FileObj = file
+		if buildErr := doBuild(opts, progress, dockerClient); buildErr != nil {
+			return errors.Wrap(buildErr, constants.ImageBuildError+"failed to build image")
 		}
 	} else {
 		remote := opts.Remote
 		if strings.HasPrefix(utils.InterfaceToString(remote), "git@github.com:") {
-			remote = strings.Replace(utils.InterfaceToString(remote), "git@github.com:", "git://github.com/", -1)
+			remote = strings.Replace(utils.InterfaceToString(remote), "git@github.com:", "https://github.com/", 1)
 		}
 		opts.Remote = remote
 		if buildErr := doBuild(opts, progress, dockerClient); buildErr != nil {
@@ -151,7 +161,18 @@ func imageBuild(image model.Image, progress *progress.Progress, dockerClient *cl
 
 func doBuild(opts model.BuildOptions, progress *progress.Progress, client *client.Client) error {
 	remote := opts.Remote
-	if remote == "" {
+	var buildContext io.Reader
+	var contextFile *os.File
+	if opts.FileObj != "" {
+		var err error
+		contextFile, err = os.Open(opts.FileObj)
+		if err != nil {
+			return errors.Wrap(err, constants.DoBuildError+"failed to open build context")
+		}
+		defer contextFile.Close()
+		buildContext = contextFile
+		remote = ""
+	} else if remote == "" {
 		remote = opts.Context
 	}
 	imageBuildOptions := types.ImageBuildOptions{
@@ -159,7 +180,7 @@ func doBuild(opts model.BuildOptions, progress *progress.Progress, client *clien
 		Remove:        true,
 		Tags:          []string{opts.Tag},
 	}
-	response, err := client.ImageBuild(context.Background(), nil, imageBuildOptions)
+	response, err := client.ImageBuild(context.Background(), buildContext, imageBuildOptions)
 	if err != nil {
 		return errors.Wrap(err, constants.DoBuildError+"failed to build image")
 	}

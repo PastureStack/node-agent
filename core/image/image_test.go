@@ -1,10 +1,11 @@
-//+build !windows
+//go:build !windows
+// +build !windows
 
 package image
 
 import (
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/docker"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/docker"
 	"gopkg.in/check.v1"
 	"testing"
 )

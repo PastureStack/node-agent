@@ -1,3 +1,4 @@
+//go:build linux || freebsd || solaris || openbsd || darwin
 // +build linux freebsd solaris openbsd darwin
 
 package compute
@@ -10,6 +11,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/PastureStack/node-agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/core/storage"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	dutils "github.com/PastureStack/node-agent/utilities/docker"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/blkiodev"
 	"github.com/docker/docker/api/types/container"
@@ -17,19 +24,13 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/hostinfo"
-	"github.com/rancher/agent/core/storage"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
-	dutils "github.com/rancher/agent/utilities/docker"
-	"github.com/rancher/agent/utilities/utils"
 	"github.com/rancher/log"
 )
 
 var (
-	cniWaitLabel       = "io.rancher.cni.wait"
-	cniNetworkLabel    = "io.rancher.cni.network"
-	rancherDNSPriority = "io.rancher.container.dns.priority"
+	cniWaitLabel           = "io.rancher.cni.wait"
+	cniNetworkLabel        = "io.rancher.cni.network"
+	legacyDNSPriorityLabel = "io.rancher.container.dns.priority"
 )
 
 func setupPublishPorts(hostConfig *container.HostConfig, instance model.Instance) {
@@ -37,10 +38,10 @@ func setupPublishPorts(hostConfig *container.HostConfig, instance model.Instance
 }
 
 func setupDNSSearch(hostConfig *container.HostConfig, instance model.Instance) error {
-	// if only rancher search is specified,
+	// If only the legacy internal search domain is specified,
 	// prepend search with params read from the system
-	last := instance.Data.Fields.Labels[rancherDNSPriority] == "service_last"
-	allRancher := true
+	last := instance.Data.Fields.Labels[legacyDNSPriorityLabel] == "service_last"
+	allLegacyInternal := true
 	dnsSearch := hostConfig.DNSSearch
 
 	if len(dnsSearch) == 0 {
@@ -50,11 +51,11 @@ func setupDNSSearch(hostConfig *container.HostConfig, instance model.Instance) e
 		if strings.HasSuffix(search, "rancher.internal") {
 			continue
 		}
-		allRancher = false
+		allLegacyInternal = false
 		break
 	}
 
-	if !allRancher {
+	if !allLegacyInternal {
 		return nil
 	}
 
@@ -126,7 +127,7 @@ func setupMacAndIP(instance model.Instance, config *container.Config, setMac boo
 		Configures the mac address and primary ip address for the the supplied
 		container. The macAddress is configured directly as part of the native
 		docker API. The primary IP address is set as an environment variable on the
-		container. Another Rancher micro-service will detect this environment
+		container. Another control-plane service will detect this environment
 		variable when the container is started and inject the IP into the
 		container.
 
@@ -150,7 +151,7 @@ func setupMacAndIP(instance model.Instance, config *container.Config, setMac boo
 		if setMac {
 			config.MacAddress = macAddress
 		}
-		utils.AddLabel(config, constants.RancherMacLabel, macAddress)
+		utils.AddLabel(config, constants.PlatformMacLabel, macAddress)
 	}
 
 	if !setHostname {
@@ -170,7 +171,7 @@ func setupMacAndIP(instance model.Instance, config *container.Config, setMac boo
 			}
 		}
 		if ipAddress != "" {
-			utils.AddLabel(config, constants.RancherIPLabel, ipAddress)
+			utils.AddLabel(config, constants.PlatformIPLabel, ipAddress)
 		}
 	}
 }
@@ -255,17 +256,17 @@ func setupPortsNetwork(instance model.Instance, config *container.Config,
 func setupLinksNetwork(instance model.Instance, config *container.Config,
 	hostConfig *container.HostConfig) {
 	/*
-			Sets up a container's config for rancher-managed links by removing the
+			Sets up a container's config for platform-managed links by removing the
 		    docker native link configuration and emulating links through environment
 		    variables.
 
-		    Note that a non-rancher container (one created and started outside the
-		    rancher API) container will not have its link configuration manipulated.
+		    A container created outside the compatibility API will not have its link
+		    configuration manipulated.
 		    This is because on a container restart, we would not be able to properly
 		    rebuild the link configuration because it depends on manipulating the
 		    createConfig.
 	*/
-	if utils.IsNonrancherContainer(instance) {
+	if utils.IsExternallyManagedContainer(instance) {
 		return
 	}
 
@@ -398,7 +399,12 @@ func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.Ho
 }
 
 func setupComputeResourceFields(hostConfig *container.HostConfig, instance model.Instance) {
+	const dockerMinMemoryReservation = 6 * 1024 * 1024
+
 	hostConfig.MemoryReservation = instance.MemoryReservation
+	if hostConfig.MemoryReservation > 0 && hostConfig.MemoryReservation < dockerMinMemoryReservation {
+		hostConfig.MemoryReservation = dockerMinMemoryReservation
+	}
 
 	shares := instance.Data.Fields.CPUShares
 	if instance.MilliCPUReservation != 0 {
@@ -428,7 +434,7 @@ func setupDeviceOptions(hostConfig *container.HostConfig, instance model.Instanc
 			// ignore this error because if we can't find the device we just skip that device
 			dev, _ = hostinfo.GetDefaultDisk(infoData)
 			if dev == "" {
-				log.Warn(fmt.Sprintf("Couldn't find default device. Not setting device options: %s", options))
+				log.Warnf("Couldn't find default device. Not setting device options: %+v", options)
 				continue
 			}
 		}
@@ -485,9 +491,9 @@ func configureDNS(dockerClient *client.Client, containerID string) error {
 	return nil
 }
 
-func setupRancherFlexVolume(instance model.Instance, hostConfig *container.HostConfig) error {
+func setupPlatformFlexVolume(instance model.Instance, hostConfig *container.HostConfig) error {
 	for _, volume := range instance.VolumesFromDataVolumeMounts {
-		if ok, err := storage.IsRancherVolume(volume); err != nil {
+		if ok, err := storage.IsPlatformVolume(volume); err != nil {
 			return err
 		} else if ok {
 			payload := struct {
@@ -497,15 +503,15 @@ func setupRancherFlexVolume(instance model.Instance, hostConfig *container.HostC
 				Name:    volume.Name,
 				Options: volume.Data.Fields.DriverOpts,
 			}
-			_, err := storage.CallRancherStorageVolumePlugin(volume, storage.Create, payload)
+			_, err := storage.CallPlatformStorageVolumePlugin(volume, storage.Create, payload)
 			if err != nil {
 				return err
 			}
-			_, err = storage.CallRancherStorageVolumePlugin(volume, storage.Attach, payload)
+			_, err = storage.CallPlatformStorageVolumePlugin(volume, storage.Attach, payload)
 			if err != nil {
 				return err
 			}
-			resp, err := storage.CallRancherStorageVolumePlugin(volume, storage.Mount, payload)
+			resp, err := storage.CallPlatformStorageVolumePlugin(volume, storage.Mount, payload)
 			if err != nil {
 				return err
 			}
@@ -527,13 +533,13 @@ func setupRancherFlexVolume(instance model.Instance, hostConfig *container.HostC
 	return nil
 }
 
-func unmountRancherFlexVolume(instance model.Instance) error {
+func unmountPlatformFlexVolume(instance model.Instance) error {
 	for _, volume := range instance.VolumesFromDataVolumeMounts {
-		if ok, err := storage.IsRancherVolume(volume); err != nil {
+		if ok, err := storage.IsPlatformVolume(volume); err != nil {
 			return err
 		} else if ok {
 			payload := struct{ Name string }{Name: volume.Name}
-			_, err := storage.CallRancherStorageVolumePlugin(volume, storage.Unmount, payload)
+			_, err := storage.CallPlatformStorageVolumePlugin(volume, storage.Unmount, payload)
 			if err != nil {
 				return err
 			}

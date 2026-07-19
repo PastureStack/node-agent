@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/rancher/websocket-proxy/common"
+	"github.com/sirupsen/logrus"
 	"sync"
 )
 

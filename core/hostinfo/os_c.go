@@ -3,10 +3,10 @@ package hostinfo
 import (
 	"fmt"
 
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/utils"
 )
 
 type OSCollector struct {

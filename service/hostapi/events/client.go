@@ -1,4 +1,5 @@
-//+build !windows
+//go:build !windows
+// +build !windows
 
 package events
 
@@ -7,7 +8,7 @@ import (
 )
 
 const (
-	defaultAPIVersion = "1.22"
+	defaultAPIVersion = ""
 )
 
 func NewDockerClient() (*client.Client, error) {

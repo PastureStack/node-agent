@@ -3,7 +3,7 @@ package framework
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/rancher/agent/handlers"
+	"github.com/PastureStack/node-agent/handlers"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/event-subscriber/locks"
 	"github.com/rancher/go-rancher/v2"
@@ -101,6 +101,6 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]revents.EventH
 			}
 		}
 	} else {
-		log.Warn("No event handler registered for event (eventName=%v)", event.Name)
+		log.Warnf("No event handler registered for event (eventName=%v)", event.Name)
 	}
 }

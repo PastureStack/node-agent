@@ -9,19 +9,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PastureStack/node-agent/core/image"
+	"github.com/PastureStack/node-agent/core/progress"
+	"github.com/PastureStack/node-agent/core/storage"
+	"github.com/PastureStack/node-agent/model"
+	configuration "github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/image"
-	"github.com/rancher/agent/core/progress"
-	"github.com/rancher/agent/core/storage"
-	"github.com/rancher/agent/model"
-	configuration "github.com/rancher/agent/utilities/config"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/utils"
 	"github.com/rancher/log"
 	"golang.org/x/net/context"
 )
@@ -134,27 +134,27 @@ func getDockerRoot(client *client.Client) string {
 	return dockerRoot
 }
 
-// setupVolumes volumes except rancher specific volumes. For rancher-managed volume driver they will be setup through special steps like flexvolume
+// setupVolumes configures ordinary volumes. Managed legacy drivers use the dedicated flex-volume path.
 func setupVolumes(config *container.Config, instance model.Instance, hostConfig *container.HostConfig, client *client.Client, progress *progress.Progress) error {
 	volumes := instance.Data.Fields.DataVolumes
 	volumesMap := map[string]struct{}{}
 	binds := []string{}
 
-	rancherManagedVolumeNames := map[string]struct{}{}
+	platformManagedVolumeNames := map[string]struct{}{}
 	if vMounts := instance.VolumesFromDataVolumeMounts; len(vMounts) > 0 {
 		for _, volume := range vMounts {
-			if ok, err := storage.IsRancherVolume(volume); err != nil {
+			if ok, err := storage.IsPlatformVolume(volume); err != nil {
 				return err
 			} else if ok {
-				rancherManagedVolumeNames[volume.Name] = struct{}{}
+				platformManagedVolumeNames[volume.Name] = struct{}{}
 			}
 		}
 	}
 	if len(volumes) > 0 {
 		for _, volume := range volumes {
 			parts := strings.SplitN(volume, ":", 3)
-			// don't set rancher managed volume
-			if _, ok := rancherManagedVolumeNames[parts[0]]; ok {
+			// Managed platform volumes are configured through the dedicated path.
+			if _, ok := platformManagedVolumeNames[parts[0]]; ok {
 				continue
 			}
 			if len(parts) == 1 {
@@ -209,7 +209,7 @@ func setupVolumes(config *container.Config, instance model.Instance, hostConfig 
 		for _, vMount := range vMounts {
 			storagePool := model.StoragePool{}
 			// volume active == exists, possibly not attached to this host
-			if ok, err := storage.IsRancherVolume(vMount); err != nil {
+			if ok, err := storage.IsPlatformVolume(vMount); err != nil {
 				return err
 			} else if !ok {
 				if ok, err := storage.IsVolumeActive(vMount, storagePool, client); !ok && err == nil {
@@ -219,8 +219,8 @@ func setupVolumes(config *container.Config, instance model.Instance, hostConfig 
 				} else if err != nil {
 					return errors.Wrap(err, constants.SetupVolumesError+"failed to check whether volume is activated")
 				}
-				// call attach if driver is rancher managed
-				if ok, err := storage.IsRancher(vMount); err != nil {
+				// Attach when the driver is managed by the compatibility platform.
+				if ok, err := storage.IsPlatformManagedDriver(vMount); err != nil {
 					return err
 				} else if ok {
 					payload := struct {
@@ -230,7 +230,7 @@ func setupVolumes(config *container.Config, instance model.Instance, hostConfig 
 						Name:    vMount.Name,
 						Options: vMount.Data.Fields.DriverOpts,
 					}
-					_, err = storage.CallRancherStorageVolumePlugin(vMount, storage.Attach, payload)
+					_, err = storage.CallPlatformStorageVolumePlugin(vMount, storage.Attach, payload)
 					if err != nil {
 						return err
 					}
@@ -293,7 +293,7 @@ func setupProxy(instance model.Instance, config *container.Config, hostEntries m
 	}
 }
 
-func setupCattleConfigURL(instance model.Instance, config *container.Config) {
+func setupPlatformConfigURL(instance model.Instance, config *container.Config) {
 	if instance.AgentID == 0 && !utils.HasLabel(instance) {
 		return
 	}
@@ -326,8 +326,7 @@ func setupCattleConfigURL(instance model.Instance, config *container.Config) {
 }
 
 func setupLegacyCommand(config *container.Config, fields model.InstanceFields, command string) {
-	// This can be removed shortly once cattle removes
-	// commandArgs
+	// Retain commandArgs while the compatibility control plane still supplies it.
 	if len(command) == 0 || len(strings.TrimSpace(command)) == 0 {
 		return
 	}

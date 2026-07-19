@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/rancher/agent/tests/framework"
+	"github.com/PastureStack/node-agent/tests/framework"
 	"github.com/rancher/log"
 	"net/http"
 )

@@ -3,12 +3,12 @@ package stats
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/PastureStack/node-agent/service/hostapi/auth"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/shirou/gopsutil/mem"
 )
 
@@ -19,13 +19,11 @@ func pathParts(path string) []string {
 }
 
 func parseRequestToken(tokenString string, parsedPublicKey interface{}) (*jwt.Token, error) {
-	if tokenString == "" {
-		return nil, fmt.Errorf("No JWT token provided")
-	}
+	return auth.ParseToken(tokenString, parsedPublicKey)
+}
 
-	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return parsedPublicKey, nil
-	})
+func getTokenClaim(token *jwt.Token, key string) (interface{}, bool) {
+	return auth.GetClaim(token, key)
 }
 
 func getContainerStats(reader io.ReadCloser, id string, pid int) (containerInfo, error) {

@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/PastureStack/node-agent/service/hostapi/auth"
+	"github.com/PastureStack/node-agent/service/hostapi/events"
 	"github.com/docker/distribution/context"
 	"github.com/docker/docker/api/types"
-	"github.com/rancher/agent/service/hostapi/auth"
-	"github.com/rancher/agent/service/hostapi/events"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
 	"github.com/rancher/websocket-proxy/common"
@@ -34,7 +34,11 @@ func (h *Handler) Handle(key string, initialMessage string, incomingMessages <-c
 		return
 	}
 
-	execMap := token.Claims["exec"].(map[string]interface{})
+	execMap, ok := auth.GetClaimMap(token, "exec")
+	if !ok {
+		log.Errorf("Token missing exec claim.")
+		return
+	}
 	execConfig, id := convert(execMap)
 
 	client, err := events.NewDockerClient()

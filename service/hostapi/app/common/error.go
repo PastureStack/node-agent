@@ -16,13 +16,13 @@ func CheckError(err error, level int) {
 
 		switch level {
 		case 0:
-			glog.Infoln("%q\n%s\n", err)
+			glog.Infof("%q\n%s\n", err, stack[:])
 		case 1:
-			glog.Warningln("%q\n%s\n", err)
+			glog.Warningf("%q\n%s\n", err, stack[:])
 		case 2:
-			glog.Errorln("%q\n%s\n", err)
+			glog.Errorf("%q\n%s\n", err, stack[:])
 		case 3:
-			glog.Fatalln("%q\n%s\n", err)
+			glog.Fatalf("%q\n%s\n", err, stack[:])
 		}
 
 		glog.Flush()

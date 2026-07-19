@@ -9,42 +9,136 @@ cleanup()
     exit $exit
 }
 
+retry_docker_pull()
+{
+    local image=$1
+    local attempts=${PASTURESTACK_TEST_DOCKER_PULL_ATTEMPTS:-5}
+    local delay=${PASTURESTACK_TEST_DOCKER_PULL_DELAY:-5}
+    local i
+
+    for i in $(seq 1 "$attempts"); do
+        if docker pull "$image"; then
+            return 0
+        fi
+        if [ "$i" -eq "$attempts" ]; then
+            break
+        fi
+        echo "docker pull $image failed; retrying in ${delay}s ($i/$attempts)"
+        sleep "$delay"
+    done
+
+    echo "docker pull $image failed after $attempts attempts"
+    return 1
+}
+
+create_local_busybox_image()
+{
+    local image=$1
+    local root
+    local applet
+    local target
+
+    root=$(mktemp -d)
+    trap 'rm -rf "$root"' RETURN
+    mkdir -p "$root/bin" "$root/etc" "$root/tmp"
+    chmod 1777 "$root/tmp"
+    cp "$(command -v busybox)" "$root/bin/busybox"
+    chmod 0755 "$root/bin/busybox"
+    for applet in $(busybox --list); do
+        [ "$applet" = busybox ] && continue
+        target="$root/bin/$applet"
+        mkdir -p "$(dirname "$target")"
+        ln -s /bin/busybox "$target"
+    done
+    printf 'root:x:0:0:root:/root:/bin/sh\n' > "$root/etc/passwd"
+    printf 'root:x:0:\n' > "$root/etc/group"
+    tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+        -C "$root" -cf - . | docker import --change 'CMD ["/bin/sh"]' - "$image" >/dev/null
+    rm -rf "$root"
+    trap - RETURN
+}
+
 cd $(dirname $0)/..
 
 if grep -q overlay /proc/filesystems; then
-    STORAGE=overlay
+    STORAGE=overlay2
 else
-    STORAGE=aufs
+    STORAGE=vfs
 fi
-docker daemon -s $STORAGE -D >/var/log/docker.log 2>&1 &
+dockerd --host=unix:///var/run/docker.sock --storage-driver=$STORAGE --userland-proxy=false --debug >/var/log/docker.log 2>&1 &
 PID=$!
 trap cleanup EXIT
 
-sleep 1
+for i in $(seq 1 60); do
+    if docker info >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
 
-docker info
+if ! docker info; then
+    cat /var/log/docker.log || true
+    exit 1
+fi
 
-ip link set dev eth0 mtu 1300
-ip link set dev docker0 mtu 1300
+ip link set dev eth0 mtu 1300 || true
+ip link show docker0 >/dev/null 2>&1 && ip link set dev docker0 mtu 1300 || true
 
 IDS=$(docker ps -qa)
 if [ -n "$IDS" ]; then
     docker kill $(docker ps -qa) || true
-    docker rm -fv || true
+    docker rm -fv $(docker ps -qa) || true
 fi
 
 echo Running tests
 
-docker pull ibuildthecloud/helloworld:latest
+TEST_BUSYBOX_IMAGE=${TEST_BUSYBOX_IMAGE:-}
+TEST_BUSYBOX_ALIAS=${TEST_BUSYBOX_ALIAS:-busybox:1}
 
-docker run -i -d busybox:1
+if [ -n "${TEST_BUSYBOX_IMAGE}" ]; then
+    retry_docker_pull "${TEST_BUSYBOX_IMAGE}"
+    if [ "${TEST_BUSYBOX_IMAGE}" != "${TEST_BUSYBOX_ALIAS}" ]; then
+        docker tag "${TEST_BUSYBOX_IMAGE}" "${TEST_BUSYBOX_ALIAS}"
+    fi
+else
+    create_local_busybox_image "${TEST_BUSYBOX_ALIAS}"
+fi
+
+TEST_IMAGE_CONTAINER=$(docker create "${TEST_BUSYBOX_ALIAS}" /bin/sh)
+cat > /tmp/pasturestack-node-agent-sleep.sh <<'EOF'
+#!/bin/sh
+i=1
+while true; do
+    echo Sleeping $i
+    i=$((i+1))
+    sleep 1
+done
+EOF
+chmod +x /tmp/pasturestack-node-agent-sleep.sh
+docker cp /tmp/pasturestack-node-agent-sleep.sh "${TEST_IMAGE_CONTAINER}:/sleep.sh"
+docker commit \
+    --change 'CMD ["/sleep.sh"]' \
+    "${TEST_IMAGE_CONTAINER}" ibuildthecloud/helloworld:latest
+docker rm "${TEST_IMAGE_CONTAINER}"
+rm -f /tmp/pasturestack-node-agent-sleep.sh
+
+CGO_ENABLED=0 go build -trimpath -o /tmp/pasturestack-volume-plugin ./tests/volume-plugin
+PLUGIN_IMAGE_CONTAINER=$(docker create "${TEST_BUSYBOX_ALIAS}" /bin/sh)
+docker cp /tmp/pasturestack-volume-plugin "${PLUGIN_IMAGE_CONTAINER}:/volume-plugin"
+docker commit \
+    --change 'ENTRYPOINT ["/volume-plugin"]' \
+    "${PLUGIN_IMAGE_CONTAINER}" pasturestack/volume-plugin-test:latest
+docker rm "${PLUGIN_IMAGE_CONTAINER}"
+rm -f /tmp/pasturestack-volume-plugin
+
+docker run -i -d "${TEST_BUSYBOX_ALIAS}"
 
 PACKAGES=". $(find -name '*.go' | xargs -I{} dirname {} |  cut -f2 -d/ | sort -u | grep -Ev '(^\.$|.git|.trash-cache|vendor|bin)' | sed -e 's!^!./!' -e 's!$!/...!')"
 
 go test -race -cover -timeout=3m -tags=test ${PACKAGES}
 
 cd tests
-find -depth -name __pycache__ -o -name "*.pyc" -exec rm -rf {} \;
+find . \( -name __pycache__ -o -name "*.pyc" \) -exec rm -rf {} +
 if [ -z "$NO_TEST" ]; then
     mkdir -p ${CATTLE_HOME:-/var/lib/cattle} || true
     tox "$@"

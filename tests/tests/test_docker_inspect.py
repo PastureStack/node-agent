@@ -1,4 +1,4 @@
-from common import delete_container, docker_client, event_test
+from .common import delete_container, docker_client, event_test
 
 
 def test_inspect_by_name(agent):

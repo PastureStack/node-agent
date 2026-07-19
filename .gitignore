@@ -11,3 +11,6 @@ tests/.venv
 tests/.idea
 agent
 agent.iml
+/build
+tests/*.egg-info
+tests/tests/*.log

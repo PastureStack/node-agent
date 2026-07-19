@@ -1,11 +1,12 @@
+//go:build linux || freebsd || solaris || openbsd || darwin
 // +build linux freebsd solaris openbsd darwin
 
 package config
 
 import (
+	"github.com/PastureStack/node-agent/utilities/constants"
 	gofqdn "github.com/ShowMax/go-fqdn"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/utilities/constants"
 	"os/exec"
 )
 

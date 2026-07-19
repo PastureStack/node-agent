@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/rancher/log"
 )
@@ -27,7 +28,7 @@ func downloadFileUtil(url string, dest string, reporthook interface{}, checksum 
 	if err == nil {
 		if checksum != "" {
 			err1 := validateChecksum(tempName, checksum)
-			if err != nil {
+			if err1 != nil {
 				return "", err1
 			}
 		}
@@ -75,15 +76,19 @@ func validateChecksum(fileName string, checksumValue string) error {
 }
 
 func downloadFromURL(rawurl string, filepath string) error {
-	file, err := os.OpenFile(filepath, os.O_WRONLY, 0666)
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_TRUNC, 0666)
 	if err == nil {
 		defer file.Close()
-		response, err1 := http.Get(rawurl)
+		client := &http.Client{Timeout: 5 * time.Minute}
+		response, err1 := client.Get(rawurl)
 		if err1 != nil {
 			log.Error(fmt.Sprintf("Error while downloading error: %s", err1))
 			return err1
 		}
 		defer response.Body.Close()
+		if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+			return fmt.Errorf("download failed with HTTP status %s", response.Status)
+		}
 		n, err := io.Copy(file, response.Body)
 		if err != nil {
 			log.Error(fmt.Sprintf("Error while copy file: %s", err))

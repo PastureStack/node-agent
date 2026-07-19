@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PastureStack/node-agent/service/hostapi/config"
+	"github.com/PastureStack/node-agent/service/hostapi/events"
+	"github.com/PastureStack/node-agent/service/hostapi/testutils"
 	"github.com/docker/distribution/context"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	docker "github.com/docker/docker/client"
 	"github.com/gorilla/websocket"
-	"github.com/rancher/agent/service/hostapi/config"
-	"github.com/rancher/agent/service/hostapi/events"
-	"github.com/rancher/agent/service/hostapi/testutils"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
 	"github.com/rancher/websocket-proxy/proxy"
@@ -48,7 +48,7 @@ func (s *LogsTestSuite) doLogTest(tty bool, prefix string, c *check.C) {
 	headers := http.Header{}
 
 	newCtr, err := s.client.ContainerCreate(context.Background(), &container.Config{
-		Image:     "hello-world:latest",
+		Image:     "ibuildthecloud/helloworld:latest",
 		OpenStdin: true,
 		Tty:       tty,
 	}, nil, nil, "logstest")
@@ -110,7 +110,7 @@ func (s *LogsTestSuite) setupWebsocketProxy() {
 		Config:        conf,
 	}
 
-	log.Infof("Starting websocket proxy. Listening on [%s], Proxying to cattle API at [%s].",
+	log.Infof("Starting websocket proxy. Listening on [%s], proxying to the control-platform API at [%s].",
 		conf.ListenAddr, conf.CattleAddr)
 
 	go p.StartProxy()
@@ -128,13 +128,9 @@ func (s *LogsTestSuite) SetUpSuite(c *check.C) {
 		c.Fatalf("Could not connect to docker, err: [%v]", err)
 	}
 	s.client = cli
-	s.pullImage("hello-world", "latest")
+	if _, _, err := s.client.ImageInspectWithRaw(context.Background(), "ibuildthecloud/helloworld:latest"); err != nil {
+		c.Fatalf("Local log test image is missing: %v", err)
+	}
 	time.Sleep(time.Duration(2) * time.Second)
 	s.setupWebsocketProxy()
-}
-
-func (s *LogsTestSuite) pullImage(imageRepo, imageTag string) error {
-	log.Infof("Pulling %v:%v image.", imageRepo, imageTag)
-	_, err := s.client.ImagePull(context.Background(), imageRepo+":"+imageTag, types.ImagePullOptions{})
-	return err
 }

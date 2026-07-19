@@ -1,5 +1,5 @@
 import:
-- package: github.com/Sirupsen/logrus
+- package: github.com/sirupsen/logrus
   version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
 
 - package: github.com/rancher/log
@@ -80,8 +80,8 @@ import:
 - package: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 
-- package: github.com/dgrijalva/jwt-go
-  version: 47b263f020574c14765ecc3ea88f0e9447046632
+- package: github.com/golang-jwt/jwt/v5
+  version: v5.3.1
 
 - package: github.com/rakyll/globalconf
   version: 415abc325023f1a00cd2d9fa512e0e71745791a2

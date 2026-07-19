@@ -1,5 +1,5 @@
-from common import delete_container, event_test, trim, docker_client, \
-    JsonObject
+from .common import delete_container, event_test, trim, docker_client, \
+    JsonObject, normalize_ports
 
 
 def test_network_mode_none(agent):
@@ -125,6 +125,7 @@ def test_network_mode_bridge(agent):
         docker_inspect = instance_data['dockerInspect']
         docker_data = instance_data['dockerContainer']
         assert 'NetworkDisabled' not in docker_inspect['Config']
+        docker_data['Ports'] = normalize_ports(docker_data['Ports'])
         assert len(docker_data['Ports']) == 1
         assert docker_data['Ports'][0]["PublicPort"] == 100
 

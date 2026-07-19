@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor/filters"
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor/model"
@@ -19,12 +19,12 @@ const (
 	interceptorType = "authTokenValidator"
 )
 
-//AuthorizeData is for the JSON output
+// AuthorizeData is for the JSON output
 type AuthorizeData struct {
 	Message string `json:"message,omitempty"`
 }
 
-//MessageData is for the JSON output
+// MessageData is for the JSON output
 type MessageData struct {
 	Data []interface{} `json:"data,omitempty"`
 }
@@ -175,7 +175,7 @@ func (f *TokenValidationFilter) ProcessFilter(filter model.FilterData, input mod
 	return output, nil
 }
 
-//get the projectID and accountID from rancher API
+// get the projectID and accountID from rancher API
 func getAccountAndProject(host string, envid string, token string, authHeaders []string) (string, string, error) {
 
 	client := &http.Client{}
@@ -224,7 +224,7 @@ func getAccountAndProject(host string, envid string, token string, authHeaders [
 	return projectid, userid, nil
 }
 
-//get the accountID from rancher API
+// get the accountID from rancher API
 func getAccountID(host string, token string, authHeaders []string) (string, error) {
 
 	client := &http.Client{}
@@ -294,7 +294,7 @@ func getAccountID(host string, token string, authHeaders []string) (string, erro
 
 }
 
-//check the AuthorizeData
+// check the AuthorizeData
 func checkIfAuthorized(bodyText []byte) error {
 
 	authMessage := AuthorizeData{}

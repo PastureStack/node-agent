@@ -1,3 +1,4 @@
+//go:build linux || freebsd || solaris || openbsd || darwin
 // +build linux freebsd solaris openbsd darwin
 
 package docker
@@ -9,10 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PastureStack/node-agent/utilities/constants"
 	dclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/utilities/constants"
 )
 
 var (
@@ -21,7 +22,7 @@ var (
 	clientLock     = sync.Mutex{}
 )
 
-const DefaultVersion = "1.22"
+const DefaultVersion = ""
 
 func launchDefaultClient(version string) (*dclient.Client, error) {
 	clientLock.Lock()
@@ -77,7 +78,7 @@ func NewEnvClientWithTimeout(timeout time.Duration) (*dclient.Client, error) {
 
 	version := os.Getenv("DOCKER_API_VERSION")
 	if version == "" {
-		version = dclient.DefaultVersion
+		version = DefaultVersion
 	}
 
 	c, err := dclient.NewClient(host, version, client, nil)

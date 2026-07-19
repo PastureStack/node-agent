@@ -9,9 +9,9 @@ import (
 	"github.com/pkg/errors"
 	. "gopkg.in/check.v1"
 
-	"github.com/rancher/agent/cloudprovider"
-	"github.com/rancher/agent/core/hostinfo"
-	"github.com/rancher/agent/utilities/config"
+	"github.com/PastureStack/node-agent/cloudprovider"
+	"github.com/PastureStack/node-agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/utilities/config"
 )
 
 // Hook up gocheck into the "go test" runner.

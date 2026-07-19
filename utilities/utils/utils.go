@@ -13,14 +13,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/PastureStack/node-agent/core/progress"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	engineCli "github.com/docker/docker/client"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/progress"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 	"golang.org/x/net/context"
@@ -63,7 +63,7 @@ func SearchInList(slice []string, target string) bool {
 	return false
 }
 
-func IsNonrancherContainer(instance model.Instance) bool {
+func IsExternallyManagedContainer(instance model.Instance) bool {
 	return instance.NativeContainer
 }
 
@@ -90,7 +90,7 @@ func HasKey(m interface{}, key string) bool {
 }
 
 func HasLabel(instance model.Instance) bool {
-	_, ok := instance.Labels[constants.CattelURLLabel]
+	_, ok := instance.Labels[constants.LegacyURLLabel]
 	return ok
 }
 
@@ -266,8 +266,14 @@ func ParseRepoTag(name string) string {
 	return name
 }
 
-func IsRancherAgent(c types.Container) bool {
-	return len(c.Names) > 0 && c.Names[0] == "/rancher-agent"
+func IsNodeAgentContainer(c types.Container) bool {
+	for _, name := range c.Names {
+		switch name {
+		case "/pasturestack-node-agent", "/rancher-agent":
+			return true
+		}
+	}
+	return false
 }
 
 func GetContainer(client *engineCli.Client, instance model.Instance, byAgent bool) (types.Container, error) {
@@ -424,7 +430,7 @@ func GetProgress(request *revents.Event, cli *client.RancherClient) *progress.Pr
 	return &progress
 }
 
-//weird method to convert an interface to string
+// weird method to convert an interface to string
 func getStringOrFloat(v interface{}) string {
 	if f, ok := v.(float64); ok {
 		return strconv.FormatFloat(f, 'f', -1, 64)

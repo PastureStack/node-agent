@@ -37,7 +37,7 @@ func (s *Handler) Handle(key string, initialMessage string, incomingMessages <-c
 
 	message, err := readMessage(incomingMessages)
 	if err != nil {
-		log.Error("Invalid content url=%v error=%v", initialMessage, err)
+		log.Errorf("Invalid content url=%v error=%v", initialMessage, err)
 		return
 	}
 

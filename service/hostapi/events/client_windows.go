@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	defaultApiVersion = "1.24"
+	defaultApiVersion = ""
 )
 
 func NewDockerClient() (*client.Client, error) {

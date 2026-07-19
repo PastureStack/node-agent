@@ -3,8 +3,8 @@ package marshaller
 import (
 	"encoding/json"
 
+	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/utilities/constants"
 	"github.com/rancher/log"
 )
 

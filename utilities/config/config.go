@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/constants"
 	goUUID "github.com/nu7hatch/gouuid"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
 	"github.com/rancher/log"
 )
 
@@ -70,9 +70,9 @@ func PhysicalHostUUID(forceWrite bool) (string, error) {
 
 func Home() string {
 	if runtime.GOOS == "windows" {
-		return DefaultValue("HOME", "c:/ProgramData/rancher")
+		return DefaultValue("HOME", "c:/ProgramData/pasturestack")
 	}
-	return DefaultValue("HOME", "/var/lib/cattle")
+	return DefaultValue("HOME", "/var/lib/pasturestack")
 }
 
 func getUUIDFromFile(uuidFilePath string) (string, error) {
@@ -189,8 +189,14 @@ func HostAPIPort() string {
 }
 
 func JwtPublicKeyFile() string {
-	path := path.Join(Home(), "etc", "cattle", "api.crt")
-	return DefaultValue("CONSOLE_HOST_API_PUBLIC_KEY", path)
+	preferredPath := path.Join(Home(), "etc", "platform", "api.crt")
+	legacyPath := path.Join(Home(), "etc", "cattle", "api.crt")
+	if _, err := os.Stat(preferredPath); os.IsNotExist(err) {
+		if _, legacyErr := os.Stat(legacyPath); legacyErr == nil {
+			preferredPath = legacyPath
+		}
+	}
+	return DefaultValue("CONSOLE_HOST_API_PUBLIC_KEY", preferredPath)
 }
 
 func HostProxy() string {
@@ -244,6 +250,9 @@ func CadvisorPort() string {
 func DefaultValue(name string, df string) string {
 	if value, ok := constants.ConfigOverride[name]; ok {
 		return value
+	}
+	if result := os.Getenv(fmt.Sprintf("PLATFORM_%s", name)); result != "" {
+		return result
 	}
 	if result := os.Getenv(fmt.Sprintf("CATTLE_%s", name)); result != "" {
 		return result

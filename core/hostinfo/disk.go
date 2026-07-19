@@ -1,9 +1,9 @@
 package hostinfo
 
 import (
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
 )
 
 type DiskCollector struct {

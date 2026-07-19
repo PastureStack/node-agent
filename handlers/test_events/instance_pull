@@ -16,8 +16,8 @@
       "image": {
         "data": {
           "dockerImage": {
-            "fullName": "strongmonkey/echo-hello:latest",
-            "server": "quay.io"
+            "fullName": "busybox:1",
+            "server": "index.docker.io"
           }
         }
       },

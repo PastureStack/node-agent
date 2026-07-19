@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/pborman/uuid"
 	"github.com/rancher/websocket-proxy/common"
+	"github.com/sirupsen/logrus"
 )
 
 type backendProxy interface {

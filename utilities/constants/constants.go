@@ -5,17 +5,17 @@ import (
 )
 
 const (
-	ContainerNameLabel = "io.rancher.container.name"
-	PullImageLabels    = "io.rancher.container.pull_image"
-	UUIDLabel          = "io.rancher.container.uuid"
-	CattelURLLabel     = "io.rancher.container.cattle_url"
-	AgentIDLabel       = "io.rancher.container.agent_id"
-	RancherAgentImage  = "io.rancher.host.agent_image"
-	RancherIPLabel     = "io.rancher.container.ip"
-	RancherMacLabel    = "io.rancher.container.mac_address"
+	ContainerNameLabel    = "io.rancher.container.name"
+	PullImageLabels       = "io.rancher.container.pull_image"
+	UUIDLabel             = "io.rancher.container.uuid"
+	LegacyURLLabel        = "io.rancher.container.cattle_url"
+	AgentIDLabel          = "io.rancher.container.agent_id"
+	LegacyAgentImageLabel = "io.rancher.host.agent_image"
+	PlatformIPLabel       = "io.rancher.container.ip"
+	PlatformMacLabel      = "io.rancher.container.mac_address"
 
 	TempName   = "work"
-	TempPrefix = "cattle-temp-"
+	TempPrefix = "pasturestack-temp-"
 )
 
 var ConfigOverride = make(map[string]string)

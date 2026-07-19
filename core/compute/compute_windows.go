@@ -4,20 +4,20 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
+	"github.com/PastureStack/node-agent/model"
+	dutils "github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/rancher/agent/model"
-	dutils "github.com/rancher/agent/utilities/docker"
 )
 
 const (
-	RancherDNSPriority = "io.rancher.container.dns.priority"
-	RancherDomain      = "rancher.internal"
+	LegacyDNSPriorityLabel = "io.rancher.container.dns.priority"
+	LegacyInternalDomain   = "rancher.internal"
 )
 
 func setupPublishPorts(hostConfig *container.HostConfig, instance model.Instance) {}
@@ -28,17 +28,17 @@ func setupDNSSearch(hostConfig *container.HostConfig, instance model.Instance) e
 	var stackNameSpace string
 
 	if instance.Data.Fields.Labels != nil {
-		setRancherSearchDomains := true
-		if strings.EqualFold(strings.TrimSpace(instance.Data.Fields.Labels[RancherDNSPriority]), "None") {
-			setRancherSearchDomains = false
+		setLegacySearchDomains := true
+		if strings.EqualFold(strings.TrimSpace(instance.Data.Fields.Labels[LegacyDNSPriorityLabel]), "None") {
+			setLegacySearchDomains = false
 		}
-		if setRancherSearchDomains {
+		if setLegacySearchDomains {
 			if value, ok := instance.Data.Fields.Labels["io.rancher.stack_service.name"]; ok {
 				splitted := strings.Split(value, "/")
 				svc := strings.ToLower(splitted[1])
 				stack := strings.ToLower(splitted[0])
-				svcNameSpace = svc + "." + stack + "." + RancherDomain
-				stackNameSpace = stack + "." + RancherDomain
+				svcNameSpace = svc + "." + stack + "." + LegacyInternalDomain
+				stackNameSpace = stack + "." + LegacyInternalDomain
 				defaultDomains = append(defaultDomains, svcNameSpace)
 				defaultDomains = append(defaultDomains, stackNameSpace)
 			}
@@ -83,7 +83,7 @@ func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.Ho
 	hostConfig.IOMaximumBandwidth = fields.IOMaximumBandwidth
 }
 
-func setupRancherFlexVolume(instance model.Instance, hostConfig *container.HostConfig) error {
+func setupPlatformFlexVolume(instance model.Instance, hostConfig *container.HostConfig) error {
 	return nil
 }
 
@@ -144,6 +144,6 @@ func dockerContainerCreate(ctx context.Context, dockerClient *client.Client, con
 	return ret, err
 }
 
-func unmountRancherFlexVolume(instance model.Instance) error {
+func unmountPlatformFlexVolume(instance model.Instance) error {
 	return nil
 }

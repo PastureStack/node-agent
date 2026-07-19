@@ -1,4 +1,5 @@
-//+build !windows
+//go:build !windows
+// +build !windows
 
 package compute
 
@@ -8,15 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/docker"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/blkiodev"
 	"github.com/docker/docker/api/types/container"
 	"github.com/nu7hatch/gouuid"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/config"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/docker"
-	"github.com/rancher/agent/utilities/utils"
 	"github.com/rancher/log"
 	"golang.org/x/net/context"
 	"gopkg.in/check.v1"
@@ -69,7 +70,7 @@ func (s *ComputeTestSuite) TestMultiNicsPickMac(c *check.C) {
 	config := container.Config{Labels: map[string]string{}}
 	setupMacAndIP(instance, &config, true, true)
 	c.Assert(config.MacAddress, check.Equals, "02:03:04:05:06:07")
-	c.Assert(config.Labels, check.DeepEquals, map[string]string{constants.RancherMacLabel: "02:03:04:05:06:07"})
+	c.Assert(config.Labels, check.DeepEquals, map[string]string{constants.PlatformMacLabel: "02:03:04:05:06:07"})
 }
 
 func (s *ComputeTestSuite) TestDefaultDisk(c *check.C) {
@@ -129,7 +130,7 @@ func (s *ComputeTestSuite) TestNoLabelField(c *check.C) {
 
 func (s *ComputeTestSuite) TestDefaultValue(c *check.C) {
 	varName, _ := uuid.NewV4()
-	cattleVarName := fmt.Sprintf("CATTLE_%v", varName)
+	legacyVarName := fmt.Sprintf("CATTLE_%v", varName)
 	def := "defaulted"
 	actual := config.DefaultValue(varName.String(), def)
 	c.Assert(def, check.Equals, actual)
@@ -137,11 +138,11 @@ func (s *ComputeTestSuite) TestDefaultValue(c *check.C) {
 	actual = config.DefaultValue(varName.String(), "")
 	c.Assert(actual, check.Equals, "")
 
-	os.Setenv(cattleVarName, "")
+	os.Setenv(legacyVarName, "")
 	actual = config.DefaultValue(varName.String(), def)
 	c.Assert(actual, check.Equals, def)
 
-	os.Setenv(cattleVarName, "foobar")
+	os.Setenv(legacyVarName, "foobar")
 	actual = config.DefaultValue(varName.String(), def)
 	c.Assert(actual, check.Equals, "foobar")
 
@@ -199,7 +200,7 @@ func setupDeviceOptionsTest(hostConfig *container.HostConfig, instance *model.In
 		if dev == "DEFAULT_DISK" {
 			dev = mockDevice
 			if dev == "" {
-				log.Warn(fmt.Sprintf("Couldn't find default device. Not setting device options: %s", options))
+				log.Warnf("Couldn't find default device. Not setting device options: %+v", options)
 				continue
 			}
 		}

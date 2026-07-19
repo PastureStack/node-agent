@@ -5,17 +5,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PastureStack/node-agent/core/image"
+	"github.com/PastureStack/node-agent/core/progress"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	dutils "github.com/PastureStack/node-agent/utilities/docker"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/image"
-	"github.com/rancher/agent/core/progress"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
-	dutils "github.com/rancher/agent/utilities/docker"
-	"github.com/rancher/agent/utilities/utils"
 	"github.com/rancher/log"
 	"golang.org/x/net/context"
 )
@@ -78,8 +78,8 @@ func DoInstanceActivate(instance model.Instance, host model.Host, progress *prog
 		return errors.Wrap(err, constants.DoInstanceActivateError+"failed to set up volumes")
 	}
 
-	if err := setupRancherFlexVolume(instance, &hostConfig); err != nil {
-		return errors.Wrap(err, constants.DoInstanceActivateError+"failed to set up rancher flex volumes")
+	if err := setupPlatformFlexVolume(instance, &hostConfig); err != nil {
+		return errors.Wrap(err, constants.DoInstanceActivateError+"failed to set up legacy platform flex volumes")
 	}
 
 	if err := setupNetworking(instance, host, &config, &hostConfig, dockerClient, infoData); err != nil {
@@ -88,7 +88,7 @@ func DoInstanceActivate(instance model.Instance, host model.Host, progress *prog
 
 	setupProxy(instance, &config, getHostEntries())
 
-	setupCattleConfigURL(instance, &config)
+	setupPlatformConfigURL(instance, &config)
 
 	setupNetworkingConfig(&networkConfig, instance)
 
@@ -134,7 +134,7 @@ func DoInstanceActivate(instance model.Instance, host model.Host, progress *prog
 		return errors.Wrap(err, constants.DoInstanceActivateError+"failed to set up DNS")
 	}
 
-	log.Infof("rancher id [%v]: Container with docker id [%v] has been started", instance.ID, containerID)
+	log.Infof("platform resource id [%v]: Container with docker id [%v] has been started", instance.ID, containerID)
 	return nil
 }
 
@@ -181,8 +181,8 @@ func DoInstanceDeactivate(instance model.Instance, client *client.Client, timeou
 		return errors.Wrap(err, constants.DoInstanceDeactivateError+"failed to get container")
 	}
 
-	if utils.IsRancherAgent(container) {
-		log.Warnf("Received event to stop rancher-agent container with id [%v]. Dropping event.", container.ID)
+	if utils.IsNodeAgentContainer(container) {
+		log.Warnf("Received event to stop the node-agent container with id [%v]. Dropping event.", container.ID)
 		return nil
 	}
 
@@ -203,7 +203,7 @@ func DoInstanceDeactivate(instance model.Instance, client *client.Client, timeou
 	} else if !ok {
 		return fmt.Errorf("Failed to stop container %v", instance.UUID)
 	}
-	log.Infof("rancher id [%v]: Container with docker id [%v] has been deactivated", instance.ID, container.ID)
+	log.Infof("platform resource id [%v]: Container with docker id [%v] has been deactivated", instance.ID, container.ID)
 	return nil
 }
 
@@ -265,14 +265,14 @@ func DoInstanceRemove(instance model.Instance, dockerClient *client.Client) erro
 		return errors.Wrap(err, constants.DoInstanceRemoveError+"failed to get container")
 	}
 
-	if utils.IsRancherAgent(container) {
-		log.Warnf("Received event to delete rancher-agent container with id [%v].", container.ID)
+	if utils.IsNodeAgentContainer(container) {
+		log.Warnf("Received event to delete the node-agent container with id [%v].", container.ID)
 		return nil
 	}
 
 	if err := utils.RemoveContainer(dockerClient, container.ID); err != nil {
 		return errors.Wrap(err, constants.DoInstanceRemoveError+"failed to remove container")
 	}
-	log.Infof("rancher id [%v]: Container with docker id [%v] has been removed", instance.ID, container.ID)
+	log.Infof("platform resource id [%v]: Container with docker id [%v] has been removed", instance.ID, container.ID)
 	return nil
 }

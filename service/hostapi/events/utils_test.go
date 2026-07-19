@@ -15,7 +15,7 @@ func useEnvVars() bool {
 
 func createContainer(client *client.Client) (types.ContainerJSON, error) {
 	config := &container.Config{
-		Image: "tianon/true",
+		Image: "busybox:1",
 	}
 	resp, err := client.ContainerCreate(context.Background(), config, nil, nil, "")
 	if err != nil {
@@ -57,7 +57,7 @@ func createTestContainerInternal(client *client.Client, ip string, useLabel bool
 	}
 
 	config := &container.Config{
-		Image:     "busybox:latest",
+		Image:     "busybox:1",
 		Labels:    labels,
 		Env:       env,
 		OpenStdin: true,
@@ -86,13 +86,10 @@ func pullTestImages(client *client.Client) {
 		}
 	}
 
-	imageName := "tianon/true:latest"
+	imageName := "busybox:1"
 	pullImage(imageName)
 
-	imageName = "busybox:latest"
-	pullImage(imageName)
-
-	imageName = "hello-world:latest"
+	imageName = "ibuildthecloud/helloworld:latest"
 	pullImage(imageName)
 }
 

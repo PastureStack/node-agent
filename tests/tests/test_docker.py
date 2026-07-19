@@ -6,15 +6,16 @@ from tests.common import event_test, delete_container, \
     container_field_test_boiler_plate, \
     trim, CONFIG_OVERRIDE, JsonObject, get_container, \
     instance_only_activate, delete_volume, DockerConfig, \
-    newer_than, json_data, if_docker, remove_container
+    newer_than, json_data, if_docker, remove_container, normalize_ports
 
-from tests.cattle import Config
+from tests.platformcompat import Config
 
 import time
 from docker.errors import APIError
+import os
 import pytest
 import platform
-from cattle.plugins.host_info.main import HostInfo
+from tests.platformcompat.plugins.host_info.main import HostInfo
 
 
 @if_docker
@@ -166,8 +167,9 @@ def test_instance_activate_mac_address(agent):
         mac_nic_received = docker_inspect['NetworkSettings']['MacAddress']
         assert mac_nic_received == '02:03:04:05:06:07'
         assert mac_received == '02:03:04:05:06:07'
-        l = docker_inspect['Config']['Labels']
-        assert l['io.rancher.container.mac_address'] == '02:03:04:05:06:07'
+        labels = docker_inspect['Config']['Labels']
+        assert labels['io.rancher.container.mac_address'] == \
+            '02:03:04:05:06:07'
         instance_activate_common_validation(resp)
 
     event_test(agent, 'docker/instance_activate', post_func=post)
@@ -211,6 +213,7 @@ def test_instance_activate_ports(agent):
         del fields['dockerIp']
         del resp['data']['instanceHostMap']['instance']['externalId']
 
+        docker_container['Ports'] = normalize_ports(docker_container['Ports'])
         assert len(docker_container['Ports']) == 4
         for port in docker_container['Ports']:
             if port['PrivatePort'] == 8080:
@@ -938,11 +941,12 @@ def test_instance_activate_device_options(agent):
 
     delete_container('/c861f990-4472-4fa1-960f-65171b544c28')
     # Note, can't test weight as it isn't supported in kernel by default
-    device_options = {'/dev/null': {
-        'readIops': 1000,
-        'writeIops': 2000,
-        'readBps': 1024,
-        'writeBps': 2048
+    device_options = {
+        '/dev/null': {
+            'readIops': 1000,
+            'writeIops': 2000,
+            'readBps': 1024,
+            'writeBps': 2048
         }
     }
 
@@ -1500,7 +1504,7 @@ def ping_post_process(req, resp):
 
     assert len(instances) == 3
 
-    resources = filter(lambda x: x.get('kind') == 'docker', resources)
+    resources = list(filter(lambda x: x.get('kind') == 'docker', resources))
     resources += instances
     resp['data']['resources'] = resources
     assert_ping_stat_resources(resp)
@@ -1514,8 +1518,8 @@ def ping_post_process_state_exception(req, resp, valid_resp):
 
     # This filters down the returned resources to just the stat-based ones.
     # In other words, it gets rid of all containers from the response.
-    resp['data']['resources'] = filter(lambda x: x.get('kind') == 'docker',
-                                       resp['data']['resources'])
+    resp['data']['resources'] = list(filter(
+        lambda x: x.get('kind') == 'docker', resp['data']['resources']))
     for r in resp['data']['resources']:
         if r['type'] == 'host':
             if platform.system() == 'Linux':
@@ -1799,13 +1803,15 @@ def test_instance_links_net_host(agent):
     delete_container('/target_mysql')
 
     client = docker_client()
-    c = client.create_container('ibuildthecloud/helloworld',
-                                ports=[(3307, 'udp'), (3306, 'tcp')],
-                                name='target_mysql')
-    client.start(c, port_bindings={
+    host_config = client.create_host_config(port_bindings={
         '3307/udp': ('127.0.0.2', 12346),
         '3306/tcp': ('127.0.0.2', 12345)
     })
+    c = client.create_container('ibuildthecloud/helloworld',
+                                ports=[(3307, 'udp'), (3306, 'tcp')],
+                                host_config=host_config,
+                                name='target_mysql')
+    client.start(c)
 
     c = client.create_container('ibuildthecloud/helloworld',
                                 name='target_redis')
@@ -1930,9 +1936,8 @@ def volumes_from_data_volume_mounts_test(agent, request,
 
 
 def _launch_convoy_container(client, dr):
-    client.pull('cjellick/convoy-local', 'v0.4.3-longhorn-2')
     container = client. \
-        create_container('cjellick/convoy-local:v0.4.3-longhorn-2',
+        create_container('pasturestack/volume-plugin-test:latest',
                          name='/convoy',
                          environment={
                              'CONVOY_SOCKET': '/var/run/%s.sock' % dr,
@@ -1948,4 +1953,11 @@ def _launch_convoy_container(client, dr):
                              '/tmp/%s:/tmp/%s' % (dr, dr)])
                          )
     client.start(container)
+    spec_path = '/etc/docker/plugins/%s.spec' % dr
+    socket_path = '/var/run/%s.sock' % dr
+    for _ in range(50):
+        if os.path.exists(spec_path) and os.path.exists(socket_path):
+            return container
+        time.sleep(0.1)
+    raise AssertionError('volume plugin did not start for %s' % dr)
     return container

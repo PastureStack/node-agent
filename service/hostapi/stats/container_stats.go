@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/PastureStack/node-agent/service/hostapi/config"
+	"github.com/PastureStack/node-agent/service/hostapi/events"
 	"github.com/docker/docker/api/types"
-	"github.com/rancher/agent/service/hostapi/config"
-	"github.com/rancher/agent/service/hostapi/events"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
 	"github.com/rancher/websocket-proxy/common"
@@ -33,7 +33,7 @@ func (s *ContainerStatsHandler) Handle(key string, initialMessage string, incomi
 
 	token, err := parseRequestToken(tokenString, config.Config.ParsedPublicKey)
 	if err == nil {
-		containerIdsInterface, found := token.Claims["containerIds"]
+		containerIdsInterface, found := getTokenClaim(token, "containerIds")
 		if found {
 			containerIdsVal, ok := containerIdsInterface.(map[string]interface{})
 			if ok {

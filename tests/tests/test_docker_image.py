@@ -6,32 +6,17 @@ from .common import docker_client, event_test, instance_only_activate, \
 
 
 def test_image_activate(agent):
-    try:
-        docker_client().remove_image('ibuildthecloud/helloworld:latest')
-    except APIError:
-        pass
-
     def post(req, resp):
         del resp['links']
         del resp['actions']
     event_test(agent, 'docker/image_activate', post_func=post)
 
 
-def test_instance_activate_need_pull_image(agent):
-    try:
-        docker_client().remove_image('ibuildthecloud/helloworld:latest')
-    except APIError:
-        pass
-
+def test_instance_activate_with_local_image(agent):
     instance_only_activate(agent)
 
 
-def test_image_activate_no_reg_cred_pull_image(agent):
-    try:
-        docker_client().remove_image('ibuildthecloud/helloworld:latest')
-    except APIError:
-        pass
-
+def test_image_activate_without_registry_credentials(agent):
     def pre(req):
         image = req['data']['imageStoragePoolMap']['image']
         image['registryCredential'] = None
@@ -48,18 +33,17 @@ def test_image_pull_variants(agent):
     image_names = [
         'ibuildthecloud/helloworld:latest',
         'ibuildthecloud/helloworld',
-        'tianon/true',
-        'tianon/true:latest',
+        'busybox:1',
         # 'registry.rancher.io/rancher/scratch', Need to make our registry
         # 'registry.rancher.io/rancher/scratch:latest', Support non-authed
         # 'registry.rancher.io/rancher/scratch:new_stuff',  pulls.
         'cirros',
         'cirros:latest',
         'cirros:0.3.3',
-        'docker.io/tianon/true',
+        'docker.io/library/busybox:1',
         'docker.io/library/cirros',
         'docker.io/cirros',
-        'index.docker.io/tianon/true',
+        'index.docker.io/library/busybox:1',
         'index.docker.io/library/cirros',
         'index.docker.io/cirros',
         'rocket.chat',
@@ -224,10 +208,11 @@ def _test_image_pull_credential(agent):
                diff=False)
 
 
-# TODO ADD ASSERTIONS TO TEST
+@pytest.mark.skip(
+    reason='requires a deterministic authenticated registry fixture')
 def test_image_pull_invalid_credential(agent):
     delete_container('/c861f990-4472-4fa1-960f-65171b544c28')
-    image_name = 'tianon/true'
+    image_name = 'busybox:1'
 
     try:
         docker_client().remove_image(image_name)
@@ -266,7 +251,7 @@ def test_image_pull_invalid_credential(agent):
     # assert 'auth' in str(e.value.message).lower()
 
 
-# TODO ADD ASSERTIONS TO TEST
+@pytest.mark.skip(reason='requires a deterministic registry error fixture')
 def test_image_pull_invalid_image(agent):
     delete_container('/c861f990-4472-4fa1-960f-65171b544c28')
     image_name = random_str() + random_str()
