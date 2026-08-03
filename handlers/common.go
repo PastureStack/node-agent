@@ -23,6 +23,7 @@ type Handler struct {
 	storage      *StorageHandler
 	configUpdate *ConfigUpdateHandler
 	ping         *PingHandler
+	portCheck    *PortCheckHandler
 }
 
 func GetHandlers() (map[string]revents.EventHandler, error) {
@@ -47,6 +48,7 @@ func GetHandlers() (map[string]revents.EventHandler, error) {
 		"storage.volume.remove":       cleanLog(logRequest(handler.storage.VolumeRemove)),
 		"ping":                        cleanLog(handler.ping.Ping),
 		"config.update":               cleanLog(logRequest(handler.configUpdate.ConfigUpdate)),
+		"host.port.check":             cleanLog(logRequest(handler.portCheck.PortCheck)),
 	}, nil
 }
 
@@ -172,11 +174,13 @@ func initializeHandlers() *Handler {
 		collectors:   Collectors,
 	}
 	configHandler := ConfigUpdateHandler{}
+	portCheckHandler := PortCheckHandler{dockerClient: clientWithTimeout}
 	handler := Handler{
 		compute:      &computerHandler,
 		storage:      &storageHandler,
 		ping:         &pingHandler,
 		configUpdate: &configHandler,
+		portCheck:    &portCheckHandler,
 	}
 	return &handler
 }

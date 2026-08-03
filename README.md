@@ -27,7 +27,9 @@ make package-image IMAGE_NAME=pasturestack/node-agent TAG=poc
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
 
-For the reviewed `0.13.21` compatibility release, `VERSION_OVERRIDE=v0.13.21 CROSS=1 make package` produces the deterministic flat assets `node-agent-0.13.21.tar.gz` and `node-agent-0.13.21-windows-amd64.zip`. PastureStack Server serves both from its matching GitHub Release and verifies their SHA-256 entries before use; operators do not need an artifact mirror. The Windows ZIP uses the neutral `pasturestack/` include layout. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported.
+For the reviewed `0.13.22` compatibility release, `VERSION_OVERRIDE=v0.13.22 CROSS=1 make package` produces the deterministic flat assets `node-agent-0.13.22.tar.gz` and `node-agent-0.13.22-windows-amd64.zip`. PastureStack Server serves both from its matching GitHub Release and verifies their SHA-256 entries before use; operators do not need an artifact mirror. The Windows ZIP uses the neutral `pasturestack/` include layout. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported.
+
+The `host.port.check` event performs a read-only host-port preflight through the existing agent event channel. It reports Docker bindings from running and stopped containers and, on Linux, listening TCP/UDP sockets visible through the existing host `/proc` mount. Incomplete host socket inspection is reported as unknown; it is never presented as an available port.
 
 The test harness starts a disposable inner Docker daemon and generates its BusyBox image, build contexts, and Git fixtures locally. It does not mount the host Docker socket or depend on mutable registry images and retired external test endpoints.
 

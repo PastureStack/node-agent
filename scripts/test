@@ -1,9 +1,18 @@
 #!/bin/bash
 set -e
 
+TEST_BLKIO_LOOP_DEVICE=
+TEST_BLKIO_BACKING_FILE=
+
 cleanup()
 {
     local exit=$?
+    if [ -n "$TEST_BLKIO_LOOP_DEVICE" ]; then
+        losetup -d "$TEST_BLKIO_LOOP_DEVICE" || true
+    fi
+    if [ -n "$TEST_BLKIO_BACKING_FILE" ]; then
+        rm -f "$TEST_BLKIO_BACKING_FILE"
+    fi
     kill $PID || true
     wait $PID || true
     exit $exit
@@ -132,6 +141,16 @@ docker rm "${PLUGIN_IMAGE_CONTAINER}"
 rm -f /tmp/pasturestack-volume-plugin
 
 docker run -i -d "${TEST_BUSYBOX_ALIAS}"
+
+# Docker's per-device I/O limits require a real block device.  Older daemon
+# versions accepted /dev/null here, but current daemons correctly reject that
+# character device.  A disposable loop device keeps this integration test
+# isolated from the runner's actual disks while exercising the real API path.
+TEST_BLKIO_BACKING_FILE=$(mktemp /tmp/pasturestack-blkio-test.XXXXXX.img)
+truncate -s 16M "$TEST_BLKIO_BACKING_FILE"
+TEST_BLKIO_LOOP_DEVICE=$(losetup --find --show "$TEST_BLKIO_BACKING_FILE")
+export TEST_BLKIO_DEVICE="$TEST_BLKIO_LOOP_DEVICE"
+test -b "$TEST_BLKIO_DEVICE"
 
 PACKAGES=". $(find -name '*.go' | xargs -I{} dirname {} |  cut -f2 -d/ | sort -u | grep -Ev '(^\.$|.git|.trash-cache|vendor|bin)' | sed -e 's!^!./!' -e 's!$!/...!')"
 
