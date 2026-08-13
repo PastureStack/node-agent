@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/PastureStack/node-agent/service/hostapi/auth"
+	"github.com/PastureStack/node-agent/service/hostapi/events"
 	"github.com/docker/distribution/context"
 	"github.com/docker/docker/api/types"
-	"github.com/rancher/agent/service/hostapi/auth"
-	"github.com/rancher/agent/service/hostapi/events"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
 	"github.com/rancher/websocket-proxy/common"
@@ -19,6 +19,8 @@ import (
 
 type Handler struct {
 }
+
+const maxTTYDimension = 65535
 
 func (h *Handler) Handle(key string, initialMessage string, incomingMessages <-chan string, response chan<- common.Message) {
 	defer backend.SignalHandlerClosed(key, response)
@@ -34,7 +36,11 @@ func (h *Handler) Handle(key string, initialMessage string, incomingMessages <-c
 		return
 	}
 
-	execMap := token.Claims["exec"].(map[string]interface{})
+	execMap, ok := auth.GetClaimMap(token, "exec")
+	if !ok {
+		log.Errorf("Token missing exec claim.")
+		return
+	}
 	execConfig, id := convert(execMap)
 
 	client, err := events.NewDockerClient()
@@ -63,25 +69,11 @@ func (h *Handler) Handle(key string, initialMessage string, incomingMessages <-c
 				return
 			}
 			if strings.HasPrefix(msg, ":resizeTTY:") {
-				resizeCommand := strings.Split(strings.Split(msg, ":")[2], ",")
-				if len(resizeCommand) != 2 {
-					continue
-				}
-				var width uint64
-				width, err = strconv.ParseUint(resizeCommand[0], 10, 64)
+				resizeOptions, err := parseTTYResize(msg)
 				if err != nil {
-					log.Errorf("Error decoding TTY width. error=%v", err)
+					log.Errorf("Error decoding TTY dimensions. error=%v", err)
 					continue
 				}
-				var height uint64
-				height, err = strconv.ParseUint(resizeCommand[1], 10, 64)
-				if err != nil {
-					log.Errorf("Error decoding TTY height. error=%v", err)
-					continue
-				}
-				resizeOptions := types.ResizeOptions{}
-				resizeOptions.Width = uint(width)
-				resizeOptions.Height = uint(height)
 				client.ContainerExecResize(context.Background(), execObj.ID, resizeOptions)
 				continue
 			}
@@ -110,6 +102,37 @@ func (h *Handler) Handle(key string, initialMessage string, incomingMessages <-c
 			break
 		}
 	}
+}
+
+func parseTTYResize(message string) (types.ResizeOptions, error) {
+	const prefix = ":resizeTTY:"
+	if !strings.HasPrefix(message, prefix) {
+		return types.ResizeOptions{}, strconv.ErrSyntax
+	}
+	parts := strings.Split(strings.TrimPrefix(message, prefix), ",")
+	if len(parts) != 2 {
+		return types.ResizeOptions{}, strconv.ErrSyntax
+	}
+	width, err := parseTTYDimension(parts[0])
+	if err != nil {
+		return types.ResizeOptions{}, err
+	}
+	height, err := parseTTYDimension(parts[1])
+	if err != nil {
+		return types.ResizeOptions{}, err
+	}
+	return types.ResizeOptions{Width: width, Height: height}, nil
+}
+
+func parseTTYDimension(value string) (uint, error) {
+	dimension, err := strconv.ParseUint(value, 10, 16)
+	if err != nil || dimension == 0 || dimension > maxTTYDimension {
+		if err != nil {
+			return 0, err
+		}
+		return 0, strconv.ErrRange
+	}
+	return uint(dimension), nil
 }
 
 func convert(execMap map[string]interface{}) (types.ExecConfig, string) {

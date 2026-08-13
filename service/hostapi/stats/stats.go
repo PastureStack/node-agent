@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/rancher/agent/service/hostapi/events"
+	"github.com/PastureStack/node-agent/service/hostapi/events"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
 	"github.com/rancher/websocket-proxy/common"

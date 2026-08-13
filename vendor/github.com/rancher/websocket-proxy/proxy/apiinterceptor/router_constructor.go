@@ -11,22 +11,22 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor/filters"
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor/filters/auth"
 	httpfilter "github.com/rancher/websocket-proxy/proxy/apiinterceptor/filters/http"
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor/model"
+	log "github.com/sirupsen/logrus"
 )
 
-//destination defines the properties of a destination
+// destination defines the properties of a destination
 type destination struct {
 	DestinationURL string   `json:"DestinationURL"`
 	Paths          []string `json:"Paths"`
 }
 
-//configFileFields stores filter config
+// configFileFields stores filter config
 type configFileFields struct {
 	RequestInterceptors []model.FilterData
 	Destinations        []destination

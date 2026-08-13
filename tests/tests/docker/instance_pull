@@ -16,12 +16,12 @@
       "image": {
         "data": {
           "dockerImage": {
-            "fullName": "tianon/true:latest",
-            "namespace": "tianon",
-            "qualifiedName": "tianon/true",
-            "repository": "true",
-            "tag": "latest",
-            "lookUpName": "tianon/true",
+            "fullName": "busybox:1",
+            "namespace": null,
+            "qualifiedName": "busybox",
+            "repository": "busybox",
+            "tag": "1",
+            "lookUpName": "busybox",
             "server": "index.docker.io"
           }
         }

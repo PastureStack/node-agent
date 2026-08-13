@@ -5,12 +5,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
+	"io"
 	"os"
-	"path"
+	"path/filepath"
 
+	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/utilities/config"
 	"github.com/rancher/log"
 )
 
@@ -31,15 +31,44 @@ func (k KeyCollector) getKey() (string, error) {
 	}
 
 	fileName := config.KeyFile()
-	bytes, err := ioutil.ReadFile(fileName)
+	root, leaf, err := managedKeyLocation(fileName)
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(root, 0700); err != nil {
+		return "", err
+	}
+	directory, err := os.OpenRoot(root)
+	if err != nil {
+		return "", err
+	}
+	defer directory.Close()
+	var bytes []byte
+	keyFile, err := directory.Open(leaf)
+	if err == nil {
+		bytes, err = io.ReadAll(io.LimitReader(keyFile, maxHostKeySize+1))
+		closeErr := keyFile.Close()
+		if err == nil {
+			err = closeErr
+		}
+		if len(bytes) > maxHostKeySize {
+			return "", errors.New("host key exceeds size limit")
+		}
+	}
 	if os.IsNotExist(err) {
 		bytes, err = k.genKey()
 		if err != nil {
 			return "", err
 		}
-		os.MkdirAll(path.Dir(fileName), 0400)
-		err = ioutil.WriteFile(fileName, bytes, 0400)
+		keyFile, err = directory.OpenFile(leaf, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0400)
 		if err != nil {
+			return "", err
+		}
+		if _, err = keyFile.Write(bytes); err != nil {
+			_ = keyFile.Close()
+			return "", err
+		}
+		if err = keyFile.Close(); err != nil {
 			return "", err
 		}
 	} else if err != nil {
@@ -64,6 +93,16 @@ func (k KeyCollector) getKey() (string, error) {
 	k.key = string(bytes)
 
 	return k.key, nil
+}
+
+const maxHostKeySize = 64 * 1024
+
+func managedKeyLocation(fileName string) (string, string, error) {
+	cleaned := filepath.Clean(fileName)
+	if filepath.Base(cleaned) != "host.key" {
+		return "", "", errors.New("host key path is not approved")
+	}
+	return filepath.Dir(cleaned), "host.key", nil
 }
 
 func (k KeyCollector) genKey() ([]byte, error) {

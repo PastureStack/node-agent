@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/PastureStack/node-agent/service/hostapi/auth"
+	"github.com/PastureStack/node-agent/service/hostapi/events"
 	"github.com/docker/docker/api/types"
-	"github.com/rancher/agent/service/hostapi/auth"
-	"github.com/rancher/agent/service/hostapi/events"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
 	"github.com/rancher/websocket-proxy/common"
@@ -39,7 +39,11 @@ func (l *Handler) Handle(key string, initialMessage string, incomingMessages <-c
 		return
 	}
 
-	logs := token.Claims["logs"].(map[string]interface{})
+	logs, ok := auth.GetClaimMap(token, "logs")
+	if !ok {
+		log.Errorf("Token missing logs claim.")
+		return
+	}
 	container := logs["Container"].(string)
 
 	logOpts := processLogOptions(logs)

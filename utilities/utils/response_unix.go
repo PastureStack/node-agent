@@ -1,4 +1,5 @@
-//+build !windows
+//go:build !windows
+// +build !windows
 
 package utils
 
@@ -10,10 +11,10 @@ import (
 	"path"
 	"time"
 
+	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/docker/docker/api/types"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/utilities/constants"
 	"github.com/rancher/log"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
@@ -43,7 +44,31 @@ func getIP(inspect types.ContainerJSON, c *cache.Cache) (string, error) {
 		c.Add(inspect.Config.Labels[constants.UUIDLabel], ip, cache.DefaultExpiration)
 		return ip, nil
 	}
-	return inspect.NetworkSettings.IPAddress, nil
+	return getDockerNetworkIP(inspect), nil
+}
+
+func getDockerNetworkIP(inspect types.ContainerJSON) string {
+	if inspect.NetworkSettings == nil {
+		return ""
+	}
+
+	if inspect.NetworkSettings.IPAddress != "" {
+		return inspect.NetworkSettings.IPAddress
+	}
+
+	for _, networkName := range []string{"bridge", "host"} {
+		if endpoint := inspect.NetworkSettings.Networks[networkName]; endpoint != nil && endpoint.IPAddress != "" {
+			return endpoint.IPAddress
+		}
+	}
+
+	for _, endpoint := range inspect.NetworkSettings.Networks {
+		if endpoint != nil && endpoint.IPAddress != "" {
+			return endpoint.IPAddress
+		}
+	}
+
+	return ""
 }
 
 func lookUpIP(inspect types.ContainerJSON) (string, error) {

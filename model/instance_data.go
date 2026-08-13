@@ -40,11 +40,11 @@ type InstanceData struct {
 			DockerIP              string   `json:"dockerIp"`
 			DockerPorts           []string `json:"dockerPorts"`
 			Labels                struct {
-				IoRancherContainerSystem  string `json:"io.rancher.container.system"`
-				IoRancherContainerUUID    string `json:"io.rancher.container.uuid"`
-				IoRancherContainerName    string `json:"io.rancher.container.name"`
-				IoRancherContainerAgentID string `json:"io.rancher.container.agent_id"`
-				IoRancherContainerIP      string `json:"io.rancher.container.ip"`
+				LegacyContainerSystem  string `json:"io.rancher.container.system"`
+				LegacyContainerUUID    string `json:"io.rancher.container.uuid"`
+				LegacyContainerName    string `json:"io.rancher.container.name"`
+				LegacyContainerAgentID string `json:"io.rancher.container.agent_id"`
+				LegacyContainerIP      string `json:"io.rancher.container.ip"`
 			} `json:"labels"`
 			PrimaryIPAddress     string `json:"primaryIpAddress"`
 			TransitioningMessage string `json:"transitioningMessage"`
@@ -69,11 +69,11 @@ type InstanceData struct {
 				Type        string `json:"Type"`
 			} `json:"Ports"`
 			Labels struct {
-				IoRancherContainerAgentID string `json:"io.rancher.container.agent_id"`
-				IoRancherContainerIP      string `json:"io.rancher.container.ip"`
-				IoRancherContainerName    string `json:"io.rancher.container.name"`
-				IoRancherContainerSystem  string `json:"io.rancher.container.system"`
-				IoRancherContainerUUID    string `json:"io.rancher.container.uuid"`
+				LegacyContainerAgentID string `json:"io.rancher.container.agent_id"`
+				LegacyContainerIP      string `json:"io.rancher.container.ip"`
+				LegacyContainerName    string `json:"io.rancher.container.name"`
+				LegacyContainerSystem  string `json:"io.rancher.container.system"`
+				LegacyContainerUUID    string `json:"io.rancher.container.uuid"`
 			} `json:"Labels"`
 			State      string `json:"State"`
 			Status     string `json:"Status"`
@@ -235,7 +235,7 @@ type InstanceData struct {
 				Cmd       []string `json:"Cmd"`
 				Image     string   `json:"Image"`
 				Volumes   struct {
-					VarLibRancherEtc struct {
+					LegacyEtcMount struct {
 					} `json:"/var/lib/rancher/etc"`
 				} `json:"Volumes"`
 				WorkingDir string      `json:"WorkingDir"`
@@ -243,11 +243,11 @@ type InstanceData struct {
 				MacAddress string      `json:"MacAddress"`
 				OnBuild    interface{} `json:"OnBuild"`
 				Labels     struct {
-					IoRancherContainerAgentID string `json:"io.rancher.container.agent_id"`
-					IoRancherContainerIP      string `json:"io.rancher.container.ip"`
-					IoRancherContainerName    string `json:"io.rancher.container.name"`
-					IoRancherContainerSystem  string `json:"io.rancher.container.system"`
-					IoRancherContainerUUID    string `json:"io.rancher.container.uuid"`
+					LegacyContainerAgentID string `json:"io.rancher.container.agent_id"`
+					LegacyContainerIP      string `json:"io.rancher.container.ip"`
+					LegacyContainerName    string `json:"io.rancher.container.name"`
+					LegacyContainerSystem  string `json:"io.rancher.container.system"`
+					LegacyContainerUUID    string `json:"io.rancher.container.uuid"`
 				} `json:"Labels"`
 			} `json:"Config"`
 			NetworkSettings struct {

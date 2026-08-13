@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PastureStack/node-agent/service/hostapi/config"
+	"github.com/PastureStack/node-agent/service/hostapi/events"
+	"github.com/PastureStack/node-agent/service/hostapi/testutils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/gorilla/websocket"
-	"github.com/rancher/agent/service/hostapi/config"
-	"github.com/rancher/agent/service/hostapi/events"
-	"github.com/rancher/agent/service/hostapi/testutils"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
 	"github.com/rancher/websocket-proxy/proxy"
@@ -134,7 +134,7 @@ func (s *ProxyTestSuite) TestToCompareDockerClientBehavior(c *check.C) {
 func (s *ProxyTestSuite) createAndStart(ws *websocket.Conn, createConfig container.Config, c *check.C) *types.ContainerJSON {
 	body, err := json.Marshal(createConfig)
 	if err != nil {
-		c.Fatal("Failed to marshal json. %#v", err)
+		c.Fatalf("Failed to marshal json. %#v", err)
 	}
 	encoded := encodeRequest("POST", "/containers/create", body, c)
 	ws.WriteMessage(websocket.TextMessage, encoded)
@@ -214,12 +214,12 @@ func encodeRequest(method string, uri string, body []byte, c *check.C) []byte {
 	reader := bytes.NewReader(body)
 	req, err := http.NewRequest(method, "http://foo"+uri, reader)
 	if err != nil {
-		c.Fatal("Failed creating new request. %#v", err)
+		c.Fatalf("Failed creating new request. %#v", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 	dump, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
-		c.Fatal("Failed dumping request. %#v", err)
+		c.Fatalf("Failed dumping request. %#v", err)
 	}
 	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(dump)))
 	base64.StdEncoding.Encode(encoded, dump)
@@ -264,6 +264,10 @@ func (s *ProxyTestSuite) SetUpSuite(c *check.C) {
 
 func (s *ProxyTestSuite) pullImage(imageRepo, imageTag string) error {
 	log.Infof("Pulling %v:%v image.", imageRepo, imageTag)
-	_, err := s.client.ImagePull(context.Background(), imageRepo+":"+imageTag, types.ImagePullOptions{})
+	image := imageRepo + ":" + imageTag
+	if _, _, err := s.client.ImageInspectWithRaw(context.Background(), image); err == nil {
+		return nil
+	}
+	_, err := s.client.ImagePull(context.Background(), image, types.ImagePullOptions{})
 	return err
 }

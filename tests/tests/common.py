@@ -1,5 +1,4 @@
-from datadiff.tools import assert_equals
-from docker import Client
+from docker import APIClient as Client
 from docker.errors import APIError
 from docker.utils import kwargs_from_env
 import inspect
@@ -11,7 +10,6 @@ import pytest
 import requests
 import tests
 import time
-from docker.utils import compare_version
 import re
 import random
 
@@ -20,6 +18,24 @@ TEST_DIR = os.path.join(dirname(tests.__file__))
 CONFIG_OVERRIDE = {}
 
 log = logging.getLogger("common")
+
+
+def assert_equals(left, right):
+    assert left == right
+
+
+def _compare_version(required, current):
+    def parts(version):
+        return [int(part) for part in version.split('.') if part.isdigit()]
+
+    left = parts(current)
+    right = parts(required)
+    max_len = max(len(left), len(right))
+    left += [0] * (max_len - len(left))
+    right += [0] * (max_len - len(right))
+    if left == right:
+        return 0
+    return 1 if left > right else -1
 
 
 if_docker = pytest.mark.skipif('False',
@@ -45,10 +61,37 @@ class JsonObject:
             self.__dict__[k] = _to_json_object(v)
 
     def __getitem__(self, item):
-        value = self.__dict__[item]
-        if isinstance(value, JsonObject):
-            return value.__dict__
-        return value
+        return self.__dict__[item]
+
+    def __setitem__(self, item, value):
+        self.__dict__[item] = _to_json_object(value)
+
+    def __delitem__(self, item):
+        del self.__dict__[item]
+
+    def __contains__(self, item):
+        return item in self.__dict__
+
+    def __iter__(self):
+        return iter(self.__dict__)
+
+    def __len__(self):
+        return len(self.__dict__)
+
+    def get(self, item, default=None):
+        return self.__dict__.get(item, default)
+
+    def pop(self, item, default=None):
+        return self.__dict__.pop(item, default)
+
+    def keys(self):
+        return self.__dict__.keys()
+
+    def items(self):
+        return self.__dict__.items()
+
+    def values(self):
+        return self.__dict__.values()
 
     def __getattr__(self, name):
         return getattr(self.__dict__, name)
@@ -88,6 +131,7 @@ class Marshaller:
     def to_string(self, obj):
         obj = JsonObject.unwrap(obj)
         return json.dumps(obj)
+
 
 marshaller = Marshaller()
 
@@ -132,7 +176,7 @@ def event_test(agent, name, pre_func=None, post_func=None, diff=True):
 
     resp = agent.execute(req)
     if post_func is not None:
-        insp = inspect.getargspec(post_func)
+        insp = inspect.getfullargspec(post_func)
         if len(insp.args) == 3:
             post_func(req, resp, valid_resp)
         else:
@@ -176,7 +220,10 @@ def delete_container(name):
 def docker_client(version=None, base_url_override=None, tls_config=None,
                   timeout=None):
     if DockerConfig.use_boot2docker_connection_env_vars():
-        kwargs = kwargs_from_env(assert_hostname=False)
+        try:
+            kwargs = kwargs_from_env(assert_hostname=False)
+        except TypeError:
+            kwargs = kwargs_from_env()
     else:
         kwargs = {'base_url': DockerConfig.url_base()}
 
@@ -188,6 +235,10 @@ def docker_client(version=None, base_url_override=None, tls_config=None,
 
     if version is None:
         version = DockerConfig.api_version()
+    if version == '':
+        version = 'auto'
+    elif _compare_version('1.40', version) < 0:
+        version = 'auto'
 
     if timeout:
         kwargs['timeout'] = timeout
@@ -215,7 +266,7 @@ class DockerConfig:
 
     @staticmethod
     def api_version():
-        return default_value('DOCKER_API_VERSION', '1.18')
+        return default_value('DOCKER_API_VERSION', '')
 
     @staticmethod
     def storage_api_version():
@@ -264,7 +315,7 @@ def instance_activate_common_validation(resp):
 def newer_than(version):
     client = docker_client()
     ver = client.version()['ApiVersion']
-    return compare_version(version, ver) >= 0
+    return _compare_version(version, ver) >= 0
 
 
 def instance_activate_assert_image_id(resp):
@@ -280,9 +331,9 @@ def instance_activate_assert_host_config(resp):
     docker_container = docker_container['+data']['dockerContainer']
     if newer_than('1.20'):
         if 'HostConfig' in docker_container:
-            assert docker_container['HostConfig'] == {
-                'NetworkMode': 'default'
-            } or docker_container['HostConfig'] == {}
+            host_config = docker_container['HostConfig']
+            if host_config:
+                assert host_config.get('NetworkMode') in ['default', 'bridge']
             del docker_container['HostConfig']
 
 
@@ -313,9 +364,23 @@ def container_field_test_boiler_plate(resp):
 
 
 def _sort_ports(docker_container):
-    docker_container['Ports'] = sorted(docker_container['Ports'],
-                                       key=lambda x: 1 - x['PrivatePort'])
+    docker_container['Ports'] = sorted(
+        normalize_ports(docker_container['Ports']),
+        key=lambda x: 1 - x['PrivatePort'])
     return docker_container
+
+
+def normalize_ports(ports):
+    result = []
+    seen = set()
+    for port in ports:
+        key = (port.get('PrivatePort'), port.get('PublicPort'),
+               port.get('Type'))
+        if port.get('IP') == '::' and key in seen:
+            continue
+        seen.add(key)
+        result.append(port)
+    return result
 
 
 def get_container(name):

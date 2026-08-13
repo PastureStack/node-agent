@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/url"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/rancher/websocket-proxy/proxy/proxyprotocol"
 )
@@ -41,7 +41,7 @@ func (h *FrontendHTTPHandler) serveHTTP(rw http.ResponseWriter, req *http.Reques
 		return nil
 	}
 
-	data, _ := token.Claims["proxy"].(map[string]interface{})
+	data, _ := objectClaim(token, "proxy")
 	address, _ := data["address"].(string)
 	scheme, _ := data["scheme"].(string)
 
@@ -148,20 +148,16 @@ func (h *FrontendHTTPHandler) authAndLookup(req *http.Request) (*jwt.Token, stri
 		return nil, "", err
 	}
 
-	token, err = jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return h.parsedPublicKey, nil
-	})
+	token, err = parseSignedJWT(tokenString, h.parsedPublicKey)
 	if err != nil {
 		return nil, "", err
 	} else if !token.Valid {
 		return nil, "", noAuthError{err: "Token is not valid"}
 	}
 
-	hostUUID, found := token.Claims["hostUuid"]
-	if found {
-		if hostKey, ok := hostUUID.(string); ok && h.backend.hasBackend(hostKey) {
-			return token, hostKey, nil
-		}
+	hostUUID, found := stringClaim(token, "hostUuid")
+	if found && h.backend.hasBackend(hostUUID) {
+		return token, hostUUID, nil
 	}
 	log.WithFields(log.Fields{"hostUuid": hostUUID}).Infof("Invalid backend host requested.")
 	return nil, "", errors.New("invalid backend")

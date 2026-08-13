@@ -3,8 +3,8 @@ package proxy
 import (
 	"net/http"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	log "github.com/sirupsen/logrus"
 )
 
 type BackendHandler struct {
@@ -37,19 +37,19 @@ func (h *BackendHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 func (h *BackendHandler) auth(req *http.Request) (string, bool) {
 	token, tokenParam, err := parseToken(req, h.parsedPublicKey)
 	if err != nil {
-		log.Warnf("Error parsing backend token: %v. Failing auth. Token parameter: %v", err, tokenParam)
+		log.Warnf("Error parsing backend token: %v. Failing auth. Token parameter: %v", err, redactSecretForLog(tokenParam))
 		return "", false
 	}
 
-	reportedUUID, found := token.Claims["reportedUuid"]
+	reportedUUID, found := claimValue(token, "reportedUuid")
 	if !found {
-		log.Warnf("Token did not have a reportedUuid. Failing auth. Token parameter: %v", tokenParam)
+		log.Warnf("Token did not have a reportedUuid. Failing auth. Token parameter: %v", redactSecretForLog(tokenParam))
 		return "", false
 	}
 
 	hostKey, ok := reportedUUID.(string)
 	if !ok || hostKey == "" {
-		log.Warnf("Token's reported uuid claim %v could not be parsed as a string. Token parameter: %v", reportedUUID, tokenParam)
+		log.Warnf("Token's reported uuid claim %v could not be parsed as a string. Token parameter: %v", reportedUUID, redactSecretForLog(tokenParam))
 		return "", false
 	}
 

@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/pborman/uuid"
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor/filters"
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor/model"
+	"github.com/sirupsen/logrus"
 )
 
 type interceptor struct {

@@ -1,13 +1,14 @@
-//+build windows
+//go:build windows
+// +build windows
 
 package utils
 
 import (
 	"bufio"
-	"github.com/Sirupsen/logrus"
+	"github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/docker/docker/api/types"
 	"github.com/patrickmn/go-cache"
-	"github.com/rancher/agent/utilities/docker"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"regexp"
 	"strings"

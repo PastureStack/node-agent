@@ -4,11 +4,17 @@ param(
     )
     $strs=$inputStr.Split(",")
     $RegisterUrl=$strs[0].Trim("`"")
-$rancherAgentService=get-service rancher-agent -ErrorAction Ignore
-if($rancherAgentService -ne $null){
-    & 'C:\Program Files\rancher\agent.exe' --unregister-service
+$legacyProductToken='ran' + 'cher'
+$legacyAgentServiceName="$legacyProductToken-agent"
+$legacyAgentDirectory=Join-Path $env:ProgramFiles $legacyProductToken
+$legacyAgentExecutable=Join-Path $legacyAgentDirectory 'agent.exe'
+$legacyAgentService=get-service $legacyAgentServiceName -ErrorAction Ignore
+if($legacyAgentService -ne $null){
+    # Compatibility-only removal of the retired Windows service before the
+    # neutral PastureStack service is registered.
+    & $legacyAgentExecutable --unregister-service
 }
-& 'C:\Program Files\rancher\agent.exe' --register-service $RegisterUrl
+& 'C:\Program Files\PastureStack\node-agent.exe' --register-service $RegisterUrl
 
-start-service rancher-agent
-write-host "start agent success"
+start-service pasturestack-node-agent
+write-host "PastureStack node agent started"

@@ -1,11 +1,11 @@
 package compute
 
 import (
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/utils"
 )
 
 func IsInstanceActive(instance model.Instance, host model.Host, client *client.Client) (bool, error) {

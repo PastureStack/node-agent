@@ -6,15 +6,41 @@ from tests.common import event_test, delete_container, \
     container_field_test_boiler_plate, \
     trim, CONFIG_OVERRIDE, JsonObject, get_container, \
     instance_only_activate, delete_volume, DockerConfig, \
-    newer_than, json_data, if_docker, remove_container
+    newer_than, json_data, if_docker, remove_container, normalize_ports
 
-from tests.cattle import Config
+from tests.platformcompat import Config
 
 import time
 from docker.errors import APIError
+import os
 import pytest
 import platform
-from cattle.plugins.host_info.main import HostInfo
+import re
+from tests.platformcompat.plugins.host_info.main import HostInfo
+
+
+def blkio_test_device():
+    configured = os.environ.get('TEST_BLKIO_DEVICE', '')
+    device = normalized_loop_device(configured)
+    if device is None:
+        pytest.fail(
+            'TEST_BLKIO_DEVICE must identify a disposable loop device')
+
+    return device
+
+
+def normalized_loop_device(configured):
+    match = re.fullmatch(r'/dev/(loop[0-9]+)', configured)
+    if match is None:
+        return None
+    return '/dev/{}'.format(match.group(1))
+
+
+def test_blkio_device_path_validation():
+    assert normalized_loop_device('/dev/loop17') == '/dev/loop17'
+    for value in ['/etc/passwd', '/dev/../etc/passwd', '/dev/sda',
+                  '/dev/loop0/../../etc/passwd', 'loop0']:
+        assert normalized_loop_device(value) is None
 
 
 @if_docker
@@ -166,8 +192,9 @@ def test_instance_activate_mac_address(agent):
         mac_nic_received = docker_inspect['NetworkSettings']['MacAddress']
         assert mac_nic_received == '02:03:04:05:06:07'
         assert mac_received == '02:03:04:05:06:07'
-        l = docker_inspect['Config']['Labels']
-        assert l['io.rancher.container.mac_address'] == '02:03:04:05:06:07'
+        labels = docker_inspect['Config']['Labels']
+        assert labels['io.rancher.container.mac_address'] == \
+            '02:03:04:05:06:07'
         instance_activate_common_validation(resp)
 
     event_test(agent, 'docker/instance_activate', post_func=post)
@@ -211,6 +238,7 @@ def test_instance_activate_ports(agent):
         del fields['dockerIp']
         del resp['data']['instanceHostMap']['instance']['externalId']
 
+        docker_container['Ports'] = normalize_ports(docker_container['Ports'])
         assert len(docker_container['Ports']) == 4
         for port in docker_container['Ports']:
             if port['PrivatePort'] == 8080:
@@ -938,11 +966,13 @@ def test_instance_activate_device_options(agent):
 
     delete_container('/c861f990-4472-4fa1-960f-65171b544c28')
     # Note, can't test weight as it isn't supported in kernel by default
-    device_options = {'/dev/null': {
-        'readIops': 1000,
-        'writeIops': 2000,
-        'readBps': 1024,
-        'writeBps': 2048
+    device = blkio_test_device()
+    device_options = {
+        device: {
+            'readIops': 1000,
+            'writeIops': 2000,
+            'readBps': 1024,
+            'writeBps': 2048
         }
     }
 
@@ -955,13 +985,13 @@ def test_instance_activate_device_options(agent):
         instance_data = resp['data']['instanceHostMap']['instance']['+data']
         host_config = instance_data['dockerInspect']['HostConfig']
         assert host_config['BlkioDeviceReadIOps'] == [
-            {'Path': '/dev/null', 'Rate': 1000}]
+            {'Path': device, 'Rate': 1000}]
         assert host_config['BlkioDeviceWriteIOps'] == [
-            {'Path': '/dev/null', 'Rate': 2000}]
+            {'Path': device, 'Rate': 2000}]
         assert host_config['BlkioDeviceReadBps'] == [
-            {'Path': '/dev/null', 'Rate': 1024}]
+            {'Path': device, 'Rate': 1024}]
         assert host_config['BlkioDeviceWriteBps'] == [
-            {'Path': '/dev/null', 'Rate': 2048}]
+            {'Path': device, 'Rate': 2048}]
         container_field_test_boiler_plate(resp)
 
         docker_container = instance_data['dockerContainer']
@@ -1002,7 +1032,8 @@ def test_instance_activate_device_options(agent):
 @if_docker
 def test_instance_activate_single_device_option(agent):
     delete_container('/c861f990-4472-4fa1-960f-65171b544c28')
-    device_options = {'/dev/null': {
+    device = blkio_test_device()
+    device_options = {device: {
         'writeIops': 2000,
     }
     }
@@ -1016,7 +1047,7 @@ def test_instance_activate_single_device_option(agent):
         instance_data = resp['data']['instanceHostMap']['instance']['+data']
         host_config = instance_data['dockerInspect']['HostConfig']
         assert host_config['BlkioDeviceWriteIOps'] == [
-            {'Path': '/dev/null', 'Rate': 2000}]
+            {'Path': device, 'Rate': 2000}]
         assert host_config['BlkioDeviceReadIOps'] is None
         assert host_config['BlkioDeviceReadBps'] is None
         assert host_config['BlkioDeviceWriteBps'] is None
@@ -1500,7 +1531,7 @@ def ping_post_process(req, resp):
 
     assert len(instances) == 3
 
-    resources = filter(lambda x: x.get('kind') == 'docker', resources)
+    resources = list(filter(lambda x: x.get('kind') == 'docker', resources))
     resources += instances
     resp['data']['resources'] = resources
     assert_ping_stat_resources(resp)
@@ -1514,8 +1545,8 @@ def ping_post_process_state_exception(req, resp, valid_resp):
 
     # This filters down the returned resources to just the stat-based ones.
     # In other words, it gets rid of all containers from the response.
-    resp['data']['resources'] = filter(lambda x: x.get('kind') == 'docker',
-                                       resp['data']['resources'])
+    resp['data']['resources'] = list(filter(
+        lambda x: x.get('kind') == 'docker', resp['data']['resources']))
     for r in resp['data']['resources']:
         if r['type'] == 'host':
             if platform.system() == 'Linux':
@@ -1799,13 +1830,15 @@ def test_instance_links_net_host(agent):
     delete_container('/target_mysql')
 
     client = docker_client()
-    c = client.create_container('ibuildthecloud/helloworld',
-                                ports=[(3307, 'udp'), (3306, 'tcp')],
-                                name='target_mysql')
-    client.start(c, port_bindings={
+    host_config = client.create_host_config(port_bindings={
         '3307/udp': ('127.0.0.2', 12346),
         '3306/tcp': ('127.0.0.2', 12345)
     })
+    c = client.create_container('ibuildthecloud/helloworld',
+                                ports=[(3307, 'udp'), (3306, 'tcp')],
+                                host_config=host_config,
+                                name='target_mysql')
+    client.start(c)
 
     c = client.create_container('ibuildthecloud/helloworld',
                                 name='target_redis')
@@ -1930,9 +1963,8 @@ def volumes_from_data_volume_mounts_test(agent, request,
 
 
 def _launch_convoy_container(client, dr):
-    client.pull('cjellick/convoy-local', 'v0.4.3-longhorn-2')
     container = client. \
-        create_container('cjellick/convoy-local:v0.4.3-longhorn-2',
+        create_container('pasturestack/volume-plugin-test:latest',
                          name='/convoy',
                          environment={
                              'CONVOY_SOCKET': '/var/run/%s.sock' % dr,
@@ -1948,4 +1980,11 @@ def _launch_convoy_container(client, dr):
                              '/tmp/%s:/tmp/%s' % (dr, dr)])
                          )
     client.start(container)
+    spec_path = '/etc/docker/plugins/%s.spec' % dr
+    socket_path = '/var/run/%s.sock' % dr
+    for _ in range(50):
+        if os.path.exists(spec_path) and os.path.exists(socket_path):
+            return container
+        time.sleep(0.1)
+    raise AssertionError('volume plugin did not start for %s' % dr)
     return container

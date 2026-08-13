@@ -6,8 +6,8 @@ import (
 	"path"
 	"time"
 
-	"github.com/rancher/agent/core/hostinfo"
-	"github.com/rancher/agent/utilities/config"
+	"github.com/PastureStack/node-agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/rancher/log"
 )
 

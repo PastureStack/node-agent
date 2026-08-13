@@ -1,4 +1,4 @@
-from common import delete_container, docker_client, \
+from .common import delete_container, docker_client, \
     container_field_test_boiler_plate, event_test, trim, \
     get_container
 
@@ -151,8 +151,10 @@ def test_native_container_deactivate_no_op(agent):
 
     def post(req, resp, valid_resp):
         instance_data = resp['data']['instanceHostMap']['instance']['+data']
-        del instance_data['dockerContainer']['Ports'][0]
-        del instance_data['+fields']['dockerPorts'][0]
+        if instance_data['dockerContainer']['Ports']:
+            del instance_data['dockerContainer']['Ports'][0]
+        if instance_data['+fields']['dockerPorts']:
+            del instance_data['+fields']['dockerPorts'][0]
         docker_inspect = instance_data['dockerInspect']
         assert docker_inspect['State']['Running']
         container_field_test_boiler_plate(resp)

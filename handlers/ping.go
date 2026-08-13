@@ -1,14 +1,14 @@
 package handlers
 
 import (
+	"github.com/PastureStack/node-agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/core/marshaller"
+	"github.com/PastureStack/node-agent/core/ping"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/constants"
 	engineCli "github.com/docker/docker/client"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/hostinfo"
-	"github.com/rancher/agent/core/marshaller"
-	"github.com/rancher/agent/core/ping"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/config"
-	"github.com/rancher/agent/utilities/constants"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 )

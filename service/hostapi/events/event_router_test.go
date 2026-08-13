@@ -5,6 +5,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/client"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -32,6 +33,7 @@ func TestEventRouter(t *testing.T) {
 	handlers := map[string][]Handler{"create": {handler}}
 	dockerClient, _ := NewDockerClient()
 	router, _ := NewEventRouter(5, 5, dockerClient, handlers)
+	router.eventOptions = eventsFromNow()
 	defer router.Stop()
 	router.Start()
 
@@ -71,6 +73,7 @@ func TestWorkerTimeout(t *testing.T) {
 
 	dockerClient, _ := NewDockerClient()
 	router, _ := NewEventRouter(1, 1, dockerClient, handlers)
+	router.eventOptions = eventsFromNow()
 	router.workerTimeout = 10 * time.Millisecond
 	defer router.Stop()
 	router.Start()
@@ -108,4 +111,10 @@ func spinupContainers(createCount int, dockerClient *client.Client, t *testing.T
 			t.Fatalf("Failure: %v", err)
 		}
 	}
+}
+
+func eventsFromNow() types.EventsOptions {
+	// Docker 29 can take long enough to attach the event stream that a fast
+	// create/remove test misses events unless it asks the daemon to replay them.
+	return types.EventsOptions{Since: strconv.FormatInt(time.Now().Add(-1*time.Second).Unix(), 10)}
 }

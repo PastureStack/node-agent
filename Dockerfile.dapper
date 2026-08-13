@@ -1,28 +1,96 @@
-FROM golang:1.9.0
-RUN apt-get update && \
-    apt-get install -y uuid-runtime iptables zip
-RUN go get github.com/rancher/trash
-RUN go get golang.org/x/lint/golint
-ARG DOCKER_VERSION=1.10.3
-RUN if [ "${DOCKER_VERSION}" = "1.10.3" ]; then \
-        curl -sL https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION} > /usr/bin/docker && \
-        chmod +x /usr/bin/docker; \
-    fi
-RUN if [ "${DOCKER_VERSION}" != "1.10.3" ]; then \
-        curl -sfL https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION}.tgz | tar xzf - -C /usr/bin --strip-components=1; \
-    fi
-ENV PATH /go/bin:$PATH
-ENV DAPPER_SOURCE /go/src/github.com/rancher/agent
-ENV DAPPER_OUTPUT bin dist
-ENV DAPPER_ENV TAG REPO CROSS
-ENV DAPPER_RUN_ARGS --privileged
-ENV GO15VENDOREXPERIMENT 1
-ENV TRASH_CACHE ${DAPPER_SOURCE}/.trash-cache
-WORKDIR ${DAPPER_SOURCE}
+FROM ubuntu:26.04@sha256:3131b4cc82a783df6c9df078f86e01819a13594b865c2cad47bd1bca2b7063bb
 
-RUN apt-get update && \
-    apt-get install -y \
-        python-tox
+RUN rm -f /usr/bin/pebble
+
+ARG DAPPER_HOST_ARCH=amd64
+ENV HOST_ARCH=${DAPPER_HOST_ARCH} ARCH=${DAPPER_HOST_ARCH}
+ENV DEBIAN_FRONTEND=noninteractive
+
+ARG UBUNTU_MIRROR=http://archive.ubuntu.com/ubuntu
+RUN set -eux; \
+    find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i \
+        -e "s|http://security.ubuntu.com/ubuntu|${UBUNTU_MIRROR}|g" \
+        -e "s|http://archive.ubuntu.com/ubuntu|${UBUNTU_MIRROR}|g" {} +; \
+    printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nAcquire::http::Pipeline-Depth "0";\n' > /etc/apt/apt.conf.d/80pasturestack-retries; \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bash \
+        busybox-static \
+        ca-certificates \
+        containerd \
+        curl \
+        docker.io \
+        file \
+        gcc \
+        git \
+        iproute2 \
+        iptables \
+        libc6-dev \
+        make \
+        python3 \
+        python3-pip \
+        python3-venv \
+        runc \
+        tar \
+        util-linux \
+        uuid-runtime \
+        xz-utils \
+        zip && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -f /usr/bin/pebble && \
+    rm -f /bin/sh && ln -s /bin/bash /bin/sh
+
+RUN git config --system --add safe.directory '*'
+
+ARG GO_VERSION=1.26.5
+ARG GO_SHA256_amd64=5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053
+ARG GO_SHA256_arm=6dae9edab81c13bccf962dec15f1fd2ec26c14a6821b4d2c92dab4130c289d7a
+ARG PIP_VERSION=26.1.2
+ARG SETUPTOOLS_VERSION=83.0.0
+ARG WHEEL_VERSION=0.47.0
+ARG TOX_VERSION=4.57.2
+ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm=armv6l GOLANG_ARCH=GOLANG_ARCH_${ARCH} \
+    GO_SHA256=GO_SHA256_${ARCH} \
+    GOPATH=/go PATH=/opt/tox/bin:/go/bin:/usr/local/go/bin:${PATH} SHELL=/bin/bash \
+    GO111MODULE=off GO15VENDOREXPERIMENT=1
+
+RUN curl -fsSL -o /tmp/go.tgz "https://go.dev/dl/go${GO_VERSION}.linux-${!GOLANG_ARCH}.tar.gz" && \
+    echo "${!GO_SHA256}  /tmp/go.tgz" | sha256sum -c - && \
+    tar -C /usr/local -xzf /tmp/go.tgz && \
+    rm -f /tmp/go.tgz && \
+    python3 -m venv /opt/tox && \
+    /opt/tox/bin/pip install --no-cache-dir --upgrade \
+        "pip==${PIP_VERSION}" \
+        "setuptools==${SETUPTOOLS_VERSION}" \
+        "wheel==${WHEEL_VERSION}" \
+        "tox==${TOX_VERSION}" && \
+    mkdir -p /go/bin /go/src && \
+    go version && \
+    docker --version && \
+    dockerd --version && \
+    containerd --version && \
+    runc --version && \
+    python3 --version && \
+    tox --version
+
+# Resolve the fully pinned test dependency set once while building the disposable
+# build image. Clean source checkouts then run without reaching PyPI.
+COPY tests/requirements.lock /tmp/node-agent-test-requirements.lock
+RUN mkdir -p /opt/node-agent-wheelhouse && \
+    /opt/tox/bin/pip download \
+        --dest /opt/node-agent-wheelhouse \
+        --requirement /tmp/node-agent-test-requirements.lock && \
+    rm -f /tmp/node-agent-test-requirements.lock
+
+ARG GOLINT_VERSION=v0.0.0-20241112194109-818c5a804067
+RUN GO111MODULE=on GOBIN=/go/bin go install "golang.org/x/lint/golint@${GOLINT_VERSION}"
+
+ENV DAPPER_SOURCE=/go/src/github.com/PastureStack/node-agent
+ENV DAPPER_OUTPUT="bin dist"
+ENV DAPPER_ENV="TAG REPO CROSS VERSION_OVERRIDE NO_TEST TEST_BUSYBOX_IMAGE TEST_BUSYBOX_ALIAS"
+ENV DAPPER_RUN_ARGS="--privileged --cgroupns=host"
+ENV HOME=/tmp GOCACHE=/tmp/go-build-cache GOMODCACHE=/tmp/go-mod-cache
+WORKDIR ${DAPPER_SOURCE}
 
 VOLUME "/var/lib/docker"
 ENTRYPOINT ["./scripts/entry"]

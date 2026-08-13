@@ -1,14 +1,14 @@
 package util
 
 import (
-	"github.com/rancher/agent/service/hostapi/config"
+	"github.com/PastureStack/node-agent/service/hostapi/config"
 	rclient "github.com/rancher/go-rancher/client"
 )
 
-func GetRancherClient() (*rclient.RancherClient, error) {
-	apiURL := config.Config.CattleURL
-	accessKey := config.Config.CattleAccessKey
-	secretKey := config.Config.CattleSecretKey
+func GetPlatformClient() (*rclient.RancherClient, error) {
+	apiURL := config.Config.PlatformURL
+	accessKey := config.Config.PlatformAccessKey
+	secretKey := config.Config.PlatformSecretKey
 
 	if apiURL == "" || accessKey == "" || secretKey == "" {
 		return nil, nil

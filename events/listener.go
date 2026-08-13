@@ -2,12 +2,13 @@ package events
 
 import (
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/PastureStack/node-agent/handlers"
+	"github.com/PastureStack/node-agent/service/hostapi"
+	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/handlers"
-	"github.com/rancher/agent/service/hostapi"
-	"github.com/rancher/agent/utilities/config"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/log"
 )
@@ -59,7 +60,13 @@ func Listen(eventURL, accessKey, secretKey string, workerCount int) error {
 
 func checkTS(timestamps *time.Time) bool {
 	stampFile := config.Stamp()
-	stats, err := os.Stat(stampFile)
+	root, leaf := filepath.Split(stampFile)
+	directory, openErr := os.OpenRoot(filepath.Clean(root))
+	if openErr != nil {
+		return true
+	}
+	defer directory.Close()
+	stats, err := directory.Stat(leaf)
 	if err != nil {
 		return true
 	}

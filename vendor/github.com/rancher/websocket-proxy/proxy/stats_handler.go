@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/rancher/websocket-proxy/common"
 )
@@ -69,7 +69,7 @@ func (h *StatsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if ok, _ := authToken.Claims["payload"].(bool); ok {
+	if ok, _ := boolClaim(authToken, "payload"); ok {
 		ws.SetReadDeadline(time.Now().Add(30 * time.Second))
 		_, content, err := ws.ReadMessage()
 		if err != nil {
@@ -184,7 +184,7 @@ func (h *StatsHandler) parseStatsInfo(req *http.Request, tokenString string, mul
 			innerJwtToken, err := parseRequestToken(innerTokenString, h.parsedPublicKey)
 			if err != nil {
 
-				return nil, fmt.Errorf("Error getting inner token: %v. Inner token parameter: %v", err, innerTokenString)
+				return nil, fmt.Errorf("Error getting inner token: %v. Inner token parameter: %v", err, redactSecretForLog(innerTokenString))
 			}
 			hostUUID, found := h.extractHostUUID(innerJwtToken)
 			if !found {
@@ -208,9 +208,13 @@ func (h *StatsHandler) parseStatsInfo(req *http.Request, tokenString string, mul
 }
 
 func getProjectOrService(token *jwt.Token) ([]map[string]string, error) {
-	data, ok := token.Claims["project"]
+	claims, ok := mapClaims(token)
 	if !ok {
-		data, ok = token.Claims["service"]
+		return nil, fmt.Errorf("invalid token claims")
+	}
+	data, ok := claims["project"]
+	if !ok {
+		data, ok = claims["service"]
 	}
 	if ok {
 		if interfaceList, isList := data.([]interface{}); isList {
@@ -236,17 +240,16 @@ func getProjectOrService(token *jwt.Token) ([]map[string]string, error) {
 }
 
 func (h *StatsHandler) extractHostUUID(token *jwt.Token) (string, bool) {
-	hostUUID, found := token.Claims["hostUuid"]
+	hostUUID, found := stringClaim(token, "hostUuid")
 	if !found {
 		log.WithFields(log.Fields{"hostUuid": hostUUID}).Infof("HostUuid not found in token.")
 		return "", false
 	}
-	hostKey, ok := hostUUID.(string)
-	if !ok || !h.backend.hasBackend(hostKey) {
+	if !h.backend.hasBackend(hostUUID) {
 		log.WithFields(log.Fields{"hostUuid": hostUUID}).Infof("Invalid HostUuid.")
 		return "", false
 	}
-	return hostKey, true
+	return hostUUID, true
 }
 
 func parseRequestToken(tokenString string, parsedPublicKey interface{}) (*jwt.Token, error) {
@@ -254,8 +257,6 @@ func parseRequestToken(tokenString string, parsedPublicKey interface{}) (*jwt.To
 		return nil, fmt.Errorf("No JWT provided")
 	}
 
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return parsedPublicKey, nil
-	})
+	token, err := parseSignedJWT(tokenString, parsedPublicKey)
 	return token, err
 }

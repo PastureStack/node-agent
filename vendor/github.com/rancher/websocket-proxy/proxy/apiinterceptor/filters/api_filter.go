@@ -5,8 +5,8 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/websocket-proxy/proxy/apiinterceptor/model"
+	log "github.com/sirupsen/logrus"
 )
 
 type APIFilter interface {

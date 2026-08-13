@@ -17,8 +17,8 @@ import (
 
 	"github.com/rancher/go-rancher/client"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/rakyll/globalconf"
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {

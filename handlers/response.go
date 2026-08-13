@@ -1,11 +1,11 @@
 package handlers
 
 import (
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	dclient "github.com/docker/docker/client"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/utils"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 )

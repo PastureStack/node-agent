@@ -1,11 +1,12 @@
-//+build windows
+//go:build windows
+// +build windows
 
 package handlers
 
 import (
+	"github.com/PastureStack/node-agent/utilities/docker"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/api/types"
-	"github.com/rancher/agent/utilities/docker"
-	"github.com/rancher/agent/utilities/utils"
 	"golang.org/x/net/context"
 	"gopkg.in/check.v1"
 )

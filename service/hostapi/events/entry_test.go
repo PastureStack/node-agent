@@ -33,7 +33,7 @@ func TestProcessDockerEvents(t *testing.T) {
 		handlerFunc: hFn,
 	}
 	processor.getHandlers = func(dockerClient *client.Client,
-		rancherClient *rclient.RancherClient) (map[string][]Handler, error) {
+		platformClient *rclient.RancherClient) (map[string][]Handler, error) {
 		return map[string][]Handler{"start": {handler}}, nil
 	}
 
@@ -98,7 +98,7 @@ func TestGetHandlers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// RancherClient is not nil, so SendToRancherHandler should be configured
+	// RancherClient is not nil, so SendToPlatformHandler should be configured
 	handlers, err = getHandlersFn(dockerClient, &rclient.RancherClient{})
 	if err != nil {
 		t.Fatal(err)

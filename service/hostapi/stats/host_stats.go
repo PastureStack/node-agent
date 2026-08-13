@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/rancher/agent/service/hostapi/config"
+	"github.com/PastureStack/node-agent/service/hostapi/config"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
 	"github.com/rancher/websocket-proxy/common"
@@ -30,7 +30,7 @@ func (s *HostStatsHandler) Handle(key string, initialMessage string, incomingMes
 
 	token, err := parseRequestToken(tokenString, config.Config.ParsedPublicKey)
 	if err == nil {
-		resourceIDInterface, found := token.Claims["resourceId"]
+		resourceIDInterface, found := getTokenClaim(token, "resourceId")
 		if found {
 			resourceIDVal, ok := resourceIDInterface.(string)
 			if ok {

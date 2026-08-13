@@ -1,15 +1,32 @@
 package testutils
 
 import (
-	"io/ioutil"
+	"crypto/rand"
+	"crypto/rsa"
+	"sync"
 
-	log "github.com/Sirupsen/logrus"
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt/v5"
+	log "github.com/sirupsen/logrus"
 )
 
+var (
+	testKeyOnce    sync.Once
+	testPrivateKey *rsa.PrivateKey
+)
+
+func getTestPrivateKey() *rsa.PrivateKey {
+	testKeyOnce.Do(func() {
+		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			log.Fatal("Failed to generate test private key.", err)
+		}
+		testPrivateKey = key
+	})
+	return testPrivateKey
+}
+
 func CreateTokenWithPayload(payload map[string]interface{}, privateKey interface{}) string {
-	token := jwt.New(jwt.GetSigningMethod("RS256"))
-	token.Claims = payload
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(payload))
 	signed, err := token.SignedString(privateKey)
 	if err != nil {
 		log.Fatal("Failed to parse private key.", err)
@@ -18,8 +35,9 @@ func CreateTokenWithPayload(payload map[string]interface{}, privateKey interface
 }
 
 func CreateToken(hostUUID string, privateKey interface{}) string {
-	token := jwt.New(jwt.GetSigningMethod("RS256"))
-	token.Claims["hostUuid"] = hostUUID
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"hostUuid": hostUUID,
+	})
 	signed, err := token.SignedString(privateKey)
 	if err != nil {
 		log.Fatal("Failed to parse private key.", err)
@@ -28,8 +46,9 @@ func CreateToken(hostUUID string, privateKey interface{}) string {
 }
 
 func CreateBackendToken(reportedUUID string, privateKey interface{}) string {
-	token := jwt.New(jwt.GetSigningMethod("RS256"))
-	token.Claims["reportedUuid"] = reportedUUID
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"reportedUuid": reportedUUID,
+	})
 	signed, err := token.SignedString(privateKey)
 	if err != nil {
 		log.Fatal("Failed to parse private key.", err)
@@ -38,30 +57,9 @@ func CreateBackendToken(reportedUUID string, privateKey interface{}) string {
 }
 
 func ParseTestPrivateKey() interface{} {
-	keyBytes, err := ioutil.ReadFile("../testutils/private.pem")
-	if err != nil {
-		log.Fatal("Failed to parse private key.", err)
-	}
-
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyBytes)
-	if err != nil {
-		log.Fatal("Failed to parse private key.", err)
-	}
-
-	return privateKey
+	return getTestPrivateKey()
 }
 
 func ParseTestPublicKey() interface{} {
-	keyBytes, err := ioutil.ReadFile("../testutils/public.pem")
-	if err != nil {
-		log.Fatal("Failed to parse public key.", err)
-	}
-
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(keyBytes)
-	if err != nil {
-		log.Fatal("Failed to parse public key.", err)
-	}
-
-	return publicKey
-
+	return &getTestPrivateKey().PublicKey
 }

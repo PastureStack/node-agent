@@ -1,4 +1,5 @@
-//+build windows
+//go:build windows
+// +build windows
 
 package register
 
@@ -19,26 +20,29 @@ import (
 )
 
 const (
-	cattleAgentIP   = "CATTLE_AGENT_IP"
-	cattleURLEnv    = "CATTLE_URL"
-	tokenFile       = "C:/ProgramData/rancher/registrationToken"
-	cattleAccessKey = "CATTLE_ACCESS_KEY"
-	cattleSecretKey = "CATTLE_SECRET_KEY"
-	apiCrtFile      = "C:/ProgramData/rancher/etc/cattle/api.crt"
+	platformAgentIP   = "PLATFORM_AGENT_IP"
+	platformURLEnv    = "PLATFORM_URL"
+	tokenFile         = "C:/ProgramData/PastureStack/registrationToken"
+	platformAccessKey = "PLATFORM_ACCESS_KEY"
+	platformSecretKey = "PLATFORM_SECRET_KEY"
+	apiCrtFile        = "C:/ProgramData/PastureStack/etc/platform/api.crt"
 )
 
 func RunRegistration(url string) error {
-	accessKey, secretKey, cattleURL, agentIP := loadEnv(url)
-	os.Setenv(cattleAgentIP, agentIP)
-	os.Setenv(cattleURLEnv, cattleURL)
+	accessKey, secretKey, platformURL, agentIP := loadEnv(url)
+	os.Setenv(platformAgentIP, agentIP)
+	os.Setenv(platformURLEnv, platformURL)
+	// Historical names remain populated only for wire-compatible child processes.
+	os.Setenv("CATTLE_AGENT_IP", agentIP)
+	os.Setenv("CATTLE_URL", platformURL)
 	if err := downloadAPICrt(); err != nil {
 		return err
 	}
-	return register(accessKey, secretKey, cattleURL)
+	return register(accessKey, secretKey, platformURL)
 }
 
 func loadEnv(url string) (string, string, string, string) {
-	accessKey, secretKey, cattleURL, agentIP := "", "", "", ""
+	accessKey, secretKey, platformURL, agentIP := "", "", "", ""
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", "", "", ""
@@ -55,7 +59,7 @@ func loadEnv(url string) (string, string, string, string) {
 			secretKey = str[1 : len(str)-1]
 		} else if strings.Contains(line, "CATTLE_URL") {
 			str := strings.Split(line, "=")[1]
-			cattleURL = str[1 : len(str)-1]
+			platformURL = str[1 : len(str)-1]
 		} else if strings.Contains(line, "DETECTED_CATTLE_AGENT_IP") {
 			if envAgentIP := os.Getenv("CATTLE_AGENT_IP"); envAgentIP != "" {
 				agentIP = envAgentIP
@@ -65,17 +69,17 @@ func loadEnv(url string) (string, string, string, string) {
 			}
 		}
 	}
-	return accessKey, secretKey, cattleURL, agentIP
+	return accessKey, secretKey, platformURL, agentIP
 }
 
-func register(accessKey, secretKey, cattleURL string) error {
+func register(accessKey, secretKey, platformURL string) error {
 	token, err := getToken()
 	if err != nil {
 		return err
 	}
 	apiClient, err := client.NewRancherClient(&client.ClientOpts{
 		Timeout:   time.Second * 30,
-		Url:       cattleURL,
+		Url:       platformURL,
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 	})
@@ -115,8 +119,10 @@ func register(accessKey, secretKey, cattleURL string) error {
 				i++
 				continue
 			}
-			os.Setenv(cattleAccessKey, list.Data[0].AccessKey)
-			os.Setenv(cattleSecretKey, list.Data[0].SecretKey)
+			os.Setenv(platformAccessKey, list.Data[0].AccessKey)
+			os.Setenv(platformSecretKey, list.Data[0].SecretKey)
+			os.Setenv("CATTLE_ACCESS_KEY", list.Data[0].AccessKey)
+			os.Setenv("CATTLE_SECRET_KEY", list.Data[0].SecretKey)
 			break
 		}
 
@@ -129,8 +135,10 @@ func register(accessKey, secretKey, cattleURL string) error {
 		if err != nil {
 			return err
 		}
-		os.Setenv(cattleAccessKey, list.Data[0].AccessKey)
-		os.Setenv(cattleSecretKey, list.Data[0].SecretKey)
+		os.Setenv(platformAccessKey, list.Data[0].AccessKey)
+		os.Setenv(platformSecretKey, list.Data[0].SecretKey)
+		os.Setenv("CATTLE_ACCESS_KEY", list.Data[0].AccessKey)
+		os.Setenv("CATTLE_SECRET_KEY", list.Data[0].SecretKey)
 	}
 	return nil
 }
@@ -164,7 +172,7 @@ func downloadAPICrt() error {
 	if _, err := os.Stat(apiCrtFile); err == nil {
 		os.Remove(apiCrtFile)
 	}
-	if err := os.MkdirAll("C:/ProgramData/rancher/etc/cattle", 0755); err != nil {
+	if err := os.MkdirAll("C:/ProgramData/PastureStack/etc/platform", 0755); err != nil {
 		return err
 	}
 	file, err := os.Create(apiCrtFile)
@@ -172,7 +180,7 @@ func downloadAPICrt() error {
 		return err
 	}
 	defer file.Close()
-	response, err1 := http.Get(os.Getenv(cattleURLEnv) + "/scripts/api.crt")
+	response, err1 := http.Get(os.Getenv(platformURLEnv) + "/scripts/api.crt")
 	if err1 != nil {
 		log.Error(fmt.Sprintf("Error while downloading error: %s", err1))
 		return err1

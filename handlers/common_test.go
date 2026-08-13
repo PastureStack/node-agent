@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/docker/docker/api/types"
-	"github.com/rancher/agent/utilities/docker"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/event-subscriber/locks"
 	"github.com/rancher/go-rancher/v2"
@@ -126,13 +126,13 @@ func newTestClient() (*client.RancherClient, *mockPublishOperations) {
 }
 
 /*
-type PublishOperations interface {
-	List(opts *ListOpts) (*PublishCollection, error)
-	Create(opts *Publish) (*Publish, error)
-	Update(existing *Publish, updates interface{}) (*Publish, error)
-	ById(id string) (*Publish, error)
-	Delete(container *Publish) error
-}
+	type PublishOperations interface {
+		List(opts *ListOpts) (*PublishCollection, error)
+		Create(opts *Publish) (*Publish, error)
+		Update(existing *Publish, updates interface{}) (*Publish, error)
+		ById(id string) (*Publish, error)
+		Delete(container *Publish) error
+	}
 */
 type mockPublishOperations struct {
 	publishedResponse *client.Publish
@@ -169,12 +169,12 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]revents.EventH
 	event := &revents.Event{}
 	err := json.Unmarshal(rawEvent, &event)
 	if err != nil {
-		log.Error("Error unmarshalling event: %v", err)
+		log.Errorf("Error unmarshalling event: %v", err)
 		return
 	}
 
 	if event.Name != "ping" {
-		log.Debug("Processing event=%v", string(rawEvent[:]))
+		log.Debugf("Processing event=%v", string(rawEvent[:]))
 	}
 
 	unlocker := locks.Lock(event.ResourceID)
@@ -201,6 +201,6 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]revents.EventH
 			}
 		}
 	} else {
-		log.Warn("No event handler registered for event (eventName=%v)", event.Name)
+		log.Warnf("No event handler registered for event (eventName=%v)", event.Name)
 	}
 }

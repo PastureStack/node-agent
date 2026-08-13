@@ -7,29 +7,29 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PastureStack/node-agent/core/progress"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/docker/docker/api/types"
 	engineCli "github.com/docker/docker/client"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/progress"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/utils"
 	"github.com/rancher/log"
 	"golang.org/x/net/context"
 )
 
 const (
-	Create         = "Create"
-	Remove         = "Remove"
-	Attach         = "Attach"
-	Mount          = "Mount"
-	Path           = "Path"
-	Unmount        = "Unmount"
-	Get            = "Get"
-	List           = "List"
-	Capabilities   = "Capabilities"
-	rancherSockDir = "/var/run/rancher/storage"
+	Create               = "Create"
+	Remove               = "Remove"
+	Attach               = "Attach"
+	Mount                = "Mount"
+	Path                 = "Path"
+	Unmount              = "Unmount"
+	Get                  = "Get"
+	List                 = "List"
+	Capabilities         = "Capabilities"
+	legacyStorageSockDir = "/var/run/rancher/storage"
 )
 
 // Response is the strucutre that the plugin's responses are serialized to.
@@ -53,7 +53,7 @@ type Capability struct {
 	Scope string
 }
 
-var rancherDrivers = map[string]bool{
+var legacyPlatformDrivers = map[string]bool{
 	"rancher-ebs":       true,
 	"rancher-nfs":       true,
 	"rancher-efs":       true,
@@ -93,7 +93,7 @@ func VolumeRemoveDocker(volume model.Volume, storagePool model.StoragePool, prog
 
 func VolumeActivateFlex(volume model.Volume) error {
 	payload := struct{ Name string }{Name: volume.Name}
-	_, err := CallRancherStorageVolumePlugin(volume, Create, payload)
+	_, err := CallPlatformStorageVolumePlugin(volume, Create, payload)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func VolumeActivateFlex(volume model.Volume) error {
 
 func VolumeRemoveFlex(volume model.Volume) error {
 	payload := struct{ Name string }{Name: volume.Name}
-	_, err := CallRancherStorageVolumePlugin(volume, Remove, payload)
+	_, err := CallPlatformStorageVolumePlugin(volume, Remove, payload)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func DoVolumeActivate(volume model.Volume, storagePool model.StoragePool, progre
 		}
 	}
 
-	// Rancher longhorn volumes indicate when they've been moved to a
+	// Legacy Longhorn volumes indicate when they have been moved to a
 	// different host. If so, we have to delete before we create
 	// to cleanup the reference in docker.
 
@@ -169,8 +169,8 @@ func DoVolumeRemove(volume model.Volume, storagePool model.StoragePool, progress
 			return nil
 		}
 
-		if utils.IsRancherAgent(container) {
-			log.Warnf("Received event to delete root volume for rancher-agent container with id [%v]. Dropping event for resource [%v].", container.ID, resourceID)
+		if utils.IsNodeAgentContainer(container) {
+			log.Warnf("Received event to delete a root volume for the node-agent container with id [%v]. Dropping event for resource [%v].", container.ID, resourceID)
 			return nil
 		}
 
@@ -224,7 +224,7 @@ func isManagedVolume(volume model.Volume) bool {
 	if driver == "" {
 		return false
 	}
-	if _, ok := rancherDrivers[driver]; ok {
+	if _, ok := legacyPlatformDrivers[driver]; ok {
 		return true
 	}
 	if volume.Name == "" {
@@ -253,15 +253,15 @@ func IsVolumeActive(volume model.Volume, storagePool model.StoragePool, dockerCl
 	return true, nil
 }
 
-func rancherStorageSockPath(volume model.Volume) string {
-	return filepath.Join(rancherSockDir, volume.Data.Fields.Driver+".sock")
+func platformStorageSockPath(volume model.Volume) string {
+	return filepath.Join(legacyStorageSockDir, volume.Data.Fields.Driver+".sock")
 }
 
-// IsRancherVolume checks if a volume to be considered as a flex volume if it is in rancherDrivers and the capability is flex
-// raise an error if its rancher-managed driver but the socket file is not available
-func IsRancherVolume(volume model.Volume) (bool, error) {
-	if _, ok := rancherDrivers[volume.Data.Fields.Driver]; ok {
-		if _, err := os.Stat(rancherStorageSockPath(volume)); err == nil {
+// IsPlatformVolume checks whether a legacy platform driver exposes flex-volume capabilities.
+// It returns an error when the managed driver is configured but its socket is unavailable.
+func IsPlatformVolume(volume model.Volume) (bool, error) {
+	if _, ok := legacyPlatformDrivers[volume.Data.Fields.Driver]; ok {
+		if _, err := os.Stat(platformStorageSockPath(volume)); err == nil {
 			// check if Capabilities is flex
 			payload := struct {
 				Name    string
@@ -270,7 +270,7 @@ func IsRancherVolume(volume model.Volume) (bool, error) {
 				Name:    volume.Name,
 				Options: volume.Data.Fields.DriverOpts,
 			}
-			response, err := CallRancherStorageVolumePlugin(volume, Capabilities, payload)
+			response, err := CallPlatformStorageVolumePlugin(volume, Capabilities, payload)
 			if err != nil {
 				return false, err
 			}
@@ -279,18 +279,18 @@ func IsRancherVolume(volume model.Volume) (bool, error) {
 			}
 			return false, nil
 		}
-		return false, errors.Errorf("socket file not found at %s", rancherStorageSockPath(volume))
+		return false, errors.Errorf("socket file not found at %s", platformStorageSockPath(volume))
 	}
 	return false, nil
 }
 
-// IsRancher checks if volume driver is rancher managed driver
-func IsRancher(volume model.Volume) (bool, error) {
-	if _, ok := rancherDrivers[volume.Data.Fields.Driver]; ok {
-		if _, err := os.Stat(rancherStorageSockPath(volume)); err == nil {
+// IsPlatformManagedDriver checks whether a volume uses a managed legacy driver.
+func IsPlatformManagedDriver(volume model.Volume) (bool, error) {
+	if _, ok := legacyPlatformDrivers[volume.Data.Fields.Driver]; ok {
+		if _, err := os.Stat(platformStorageSockPath(volume)); err == nil {
 			return true, nil
 		}
-		return false, errors.Errorf("rancher driver %s is not running: can't find socket file", volume.Driver)
+		return false, errors.Errorf("legacy platform driver %s is not running: can't find socket file", volume.Driver)
 	}
 	return false, nil
 }

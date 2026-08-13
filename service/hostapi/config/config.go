@@ -3,31 +3,31 @@ package config
 import (
 	"crypto/x509"
 	"encoding/pem"
+	configuration "github.com/PastureStack/node-agent/utilities/config"
 	"github.com/golang/glog"
-	configuration "github.com/rancher/agent/utilities/config"
 	"io/ioutil"
 	"os"
 	"strconv"
 )
 
 type config struct {
-	DockerURL       string
-	Systemd         bool
-	NumStats        int
-	Auth            bool
-	HaProxyMonitor  bool
-	Key             string
-	HostUUID        string
-	Port            int
-	IP              string
-	ParsedPublicKey interface{}
-	HostUUIDCheck   bool
-	EventsPoolSize  int
-	CattleURL       string
-	CattleAccessKey string
-	CattleSecretKey string
-	PidFile         string
-	LogFile         string
+	DockerURL         string
+	Systemd           bool
+	NumStats          int
+	Auth              bool
+	HaProxyMonitor    bool
+	Key               string
+	HostUUID          string
+	Port              int
+	IP                string
+	ParsedPublicKey   interface{}
+	HostUUIDCheck     bool
+	EventsPoolSize    int
+	PlatformURL       string
+	PlatformAccessKey string
+	PlatformSecretKey string
+	PidFile           string
+	LogFile           string
 }
 
 var Config config
@@ -68,9 +68,9 @@ func Parse() error {
 	Config.HostUUIDCheck = true
 	Config.Key = configuration.JwtPublicKeyFile()
 	Config.EventsPoolSize = 10
-	Config.CattleURL = configuration.APIURL("")
-	Config.CattleAccessKey = configuration.AccessKey()
-	Config.CattleSecretKey = configuration.SecretKey()
+	Config.PlatformURL = configuration.APIURL("")
+	Config.PlatformAccessKey = configuration.AccessKey()
+	Config.PlatformSecretKey = configuration.SecretKey()
 
 	if len(Config.Key) > 0 {
 		if err := ParsedPublicKey(); err != nil {

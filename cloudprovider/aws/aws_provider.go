@@ -6,8 +6,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	"github.com/rancher/agent/cloudprovider"
-	"github.com/rancher/agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/cloudprovider"
+	"github.com/PastureStack/node-agent/core/hostinfo"
 )
 
 const (

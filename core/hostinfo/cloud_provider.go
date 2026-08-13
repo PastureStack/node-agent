@@ -6,7 +6,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/rancher/agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/config"
 )
 
 type CloudProviderCollector struct{}

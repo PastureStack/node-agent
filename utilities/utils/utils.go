@@ -1,26 +1,28 @@
 package utils
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/PastureStack/node-agent/core/progress"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	engineCli "github.com/docker/docker/client"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/progress"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 	"golang.org/x/net/context"
@@ -63,7 +65,7 @@ func SearchInList(slice []string, target string) bool {
 	return false
 }
 
-func IsNonrancherContainer(instance model.Instance) bool {
+func IsExternallyManagedContainer(instance model.Instance) bool {
 	return instance.NativeContainer
 }
 
@@ -90,7 +92,7 @@ func HasKey(m interface{}, key string) bool {
 }
 
 func HasLabel(instance model.Instance) bool {
-	_, ok := instance.Labels[constants.CattelURLLabel]
+	_, ok := instance.Labels[constants.LegacyURLLabel]
 	return ok
 }
 
@@ -129,20 +131,39 @@ func GetFieldsIfExist(m map[string]interface{}, fields ...string) (interface{}, 
 	return tempMap, true
 }
 
-func TempFileInWorkDir(destination string) string {
-	dstPath := path.Join(destination, constants.TempName)
-	if _, err := os.Stat(dstPath); os.IsNotExist(err) {
-		os.MkdirAll(dstPath, 0777)
+func TempFileInWorkDir() (string, error) {
+	buildRoot := config.Builds()
+	if err := os.MkdirAll(buildRoot, 0700); err != nil {
+		return "", err
 	}
-	return TempFile(dstPath)
-}
-
-func TempFile(destination string) string {
-	tempDst, err := ioutil.TempFile(destination, constants.TempPrefix)
-	if err == nil {
-		return tempDst.Name()
+	if err := os.MkdirAll(filepath.Join(buildRoot, constants.TempName), 0700); err != nil {
+		return "", err
 	}
-	return ""
+	root, err := os.OpenRoot(buildRoot)
+	if err != nil {
+		return "", err
+	}
+	defer root.Close()
+	for attempt := 0; attempt < 10; attempt++ {
+		randomBytes := make([]byte, 16)
+		if _, err := rand.Read(randomBytes); err != nil {
+			return "", err
+		}
+		leaf := constants.TempPrefix + hex.EncodeToString(randomBytes)
+		relativeName := filepath.ToSlash(filepath.Join(constants.TempName, leaf))
+		tempDst, err := root.OpenFile(relativeName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+		if os.IsExist(err) {
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+		if err := tempDst.Close(); err != nil {
+			return "", err
+		}
+		return filepath.Join(buildRoot, constants.TempName, leaf), nil
+	}
+	return "", errors.New("failed to create unique build temporary file")
 }
 
 func ConvertPortToString(port int) string {
@@ -266,8 +287,14 @@ func ParseRepoTag(name string) string {
 	return name
 }
 
-func IsRancherAgent(c types.Container) bool {
-	return len(c.Names) > 0 && c.Names[0] == "/rancher-agent"
+func IsNodeAgentContainer(c types.Container) bool {
+	for _, name := range c.Names {
+		switch name {
+		case "/pasturestack-node-agent", "/rancher-agent":
+			return true
+		}
+	}
+	return false
 }
 
 func GetContainer(client *engineCli.Client, instance model.Instance, byAgent bool) (types.Container, error) {
@@ -424,7 +451,7 @@ func GetProgress(request *revents.Event, cli *client.RancherClient) *progress.Pr
 	return &progress
 }
 
-//weird method to convert an interface to string
+// weird method to convert an interface to string
 func getStringOrFloat(v interface{}) string {
 	if f, ok := v.(float64); ok {
 		return strconv.FormatFloat(f, 'f', -1, 64)

@@ -1,40 +1,79 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
+
+umask 022
 
 source $(dirname $0)/version
 
 cd $(dirname $0)/..
 
-CONTENT=$(uuidgen)
+RELEASE_VERSION=${VERSION#v}
+CONTENT=${PASTURESTACK_PACKAGE_ID:-$(git rev-parse --short=32 HEAD)}
+SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git show -s --format=%ct HEAD)}
+case "$RELEASE_VERSION" in
+    ''|*[!0-9.]*) echo "VERSION_OVERRIDE must contain a numeric release version" >&2; exit 1 ;;
+esac
+case "$CONTENT" in
+    ''|*[!0-9a-f]*) echo "PASTURESTACK_PACKAGE_ID must be lowercase hexadecimal" >&2; exit 1 ;;
+esac
+case "$SOURCE_DATE_EPOCH" in
+    ''|*[!0-9]*) echo "SOURCE_DATE_EPOCH must be an integer" >&2; exit 1 ;;
+esac
 
 rm -rf dist/artifacts
+rm -rf "build/${CONTENT}"
 
 mkdir -p build/${CONTENT}/bin
 mkdir -p dist/artifacts
 
-if [ ! -e bin/agent ]; then
+if [ ! -e bin/node-agent ]; then
     ./scripts/build
 fi
 
 cp -rf apply.sh build/${CONTENT}
-cp -rf bin/agent build/${CONTENT}/bin
+cp -rf bin/node-agent build/${CONTENT}/bin
 
-pushd build
+pushd build >/dev/null
 
-sha1sum -b $(find ${CONTENT} -type f) > ${CONTENT}/SHA1SUMS
-sha1sum ${CONTENT}/SHA1SUMS > ${CONTENT}/SHA1SUMSSUM
+find "${CONTENT}" -type f ! -name SHA1SUMS ! -name SHA1SUMSSUM -print0 | sort -z | \
+    xargs -0 sha1sum -b > "${CONTENT}/SHA1SUMS"
+sha1sum "${CONTENT}/SHA1SUMS" > "${CONTENT}/SHA1SUMSSUM"
 
-tar czf ../dist/artifacts/go-agent.tar.gz ${CONTENT}
-echo Created ../dist/artifacts/go-agent.tar.gz
+archive_tmp=$(mktemp "../dist/artifacts/.node-agent-${RELEASE_VERSION}.tar.gz.XXXXXX")
+trap 'rm -f "$archive_tmp"' EXIT
+tar --sort=name --format=gnu --mtime="@${SOURCE_DATE_EPOCH}" \
+    --owner=0 --group=0 --numeric-owner -cf - "${CONTENT}" | gzip -n > "$archive_tmp"
+mv "$archive_tmp" "../dist/artifacts/node-agent-${RELEASE_VERSION}.tar.gz"
+trap - EXIT
+echo Created ../dist/artifacts/node-agent-${RELEASE_VERSION}.tar.gz
 
-popd
+popd >/dev/null
 
-if [ -n "$CROSS" ]; then
-    pushd build
-    mkdir -p rancher
-    cp ../bin/windows/amd64/agent.exe rancher/
-    cp ../package/startup_agent.ps1 rancher/
-    zip -r ../dist/artifacts/go-agent.zip rancher/
-    echo Created ../dist/artifacts/go-agent.zip
-    popd 
+if [ -n "${CROSS:-}" ]; then
+    windows_artifact="dist/artifacts/node-agent-${RELEASE_VERSION}-windows-amd64.zip"
+    python3 - "$windows_artifact" bin/windows/amd64/node-agent.exe package/startup_agent.ps1 <<'PY'
+import pathlib
+import sys
+import zipfile
+
+output = pathlib.Path(sys.argv[1])
+inputs = (
+    ("pasturestack/node-agent.exe", pathlib.Path(sys.argv[2]), 0o100755),
+    ("pasturestack/startup_node-agent.ps1", pathlib.Path(sys.argv[3]), 0o100644),
+)
+
+with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+    directory = zipfile.ZipInfo("pasturestack/", (1980, 1, 1, 0, 0, 0))
+    directory.create_system = 3
+    directory.external_attr = (0o40755 << 16) | 0x10
+    directory.compress_type = zipfile.ZIP_STORED
+    archive.writestr(directory, b"")
+    for name, path, mode in inputs:
+        entry = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
+        entry.create_system = 3
+        entry.external_attr = mode << 16
+        entry.compress_type = zipfile.ZIP_DEFLATED
+        archive.writestr(entry, path.read_bytes())
+PY
+    echo Created "$windows_artifact"
 fi

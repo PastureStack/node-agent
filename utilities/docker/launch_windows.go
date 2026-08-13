@@ -2,17 +2,17 @@ package docker
 
 import (
 	"fmt"
+	"github.com/PastureStack/node-agent/utilities/constants"
 	dockerClient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/utilities/constants"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 )
 
-const DefaultVersion = "1.24"
+const DefaultVersion = ""
 
 func launchDefaultClient(version string) (*dockerClient.Client, error) {
 	ip := fmt.Sprintf("tcp://%v:2375", os.Getenv("DEFAULT_GATEWAY"))
@@ -60,7 +60,7 @@ func NewEnvClientWithTimeout(timeout time.Duration) (*dockerClient.Client, error
 
 	version := os.Getenv("DOCKER_API_VERSION")
 	if version == "" {
-		version = dockerClient.DefaultVersion
+		version = DefaultVersion
 	}
 
 	return dockerClient.NewClient(host, version, client, nil)

@@ -1,0 +1,135 @@
+name: CodeQL verification
+
+on:
+  push:
+    branches:
+      - 'verification/node-agent-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: node-agent-codeql-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build-mode: manual
+          - language: python
+            build-mode: none
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify candidate shape
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain)"
+          test "$(git rev-list --count c8663d12dd253ef13258750dca056d4b1219fc10..HEAD)" -eq 1
+          grep -Fq 'VERSION_OVERRIDE: v0.13.23' .github/workflows/validate.yml
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c16c0f3f2812ec4bb3750a5ed64873fe2ce0fbef
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config: |
+            queries:
+              - uses: security-extended
+            threat-models: local
+
+      - name: Build Go source
+        if: matrix.language == 'go'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GO111MODULE=off
+          export GOPATH="$RUNNER_TEMP/gopath"
+          source_root="$GOPATH/src/github.com/PastureStack/node-agent"
+          mkdir -p "$(dirname "$source_root")" "$GITHUB_WORKSPACE/bin"
+          ln -s "$GITHUB_WORKSPACE" "$source_root"
+          cd "$source_root"
+          CGO_ENABLED=0 go build -trimpath -tags 'netgo osusergo' \
+            -ldflags='-w -s -X main.VERSION=v0.13.23' \
+            -o "$GITHUB_WORKSPACE/bin/node-agent" ./
+
+      - name: Analyze without publishing temporary alerts
+        uses: github/codeql-action/analyze@c16c0f3f2812ec4bb3750a5ed64873fe2ce0fbef
+        with:
+          category: '/language:${{ matrix.language }}'
+          upload: never
+          output: codeql-results
+
+      - name: Reject Critical and High findings
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob
+          import json
+
+          blocked = []
+          unresolved = []
+          total = 0
+          for path in glob.glob('codeql-results/**/*.sarif', recursive=True):
+              with open(path, encoding='utf-8') as stream:
+                  sarif = json.load(stream)
+              for run in sarif.get('runs', []):
+                  rules = {
+                      rule.get('id'): rule
+                      for rule in run.get('tool', {}).get('driver', {}).get('rules', [])
+                  }
+                  for extension in run.get('tool', {}).get('extensions', []):
+                      rules.update({rule.get('id'): rule for rule in extension.get('rules', [])})
+                  for result in run.get('results', []):
+                      total += 1
+                      rule_id = result.get('ruleId')
+                      rule = rules.get(rule_id)
+                      if rule is None:
+                          unresolved.append((rule_id, 'missing rule metadata'))
+                          continue
+                      try:
+                          score = float(rule.get('properties', {}).get('security-severity', '0'))
+                      except (TypeError, ValueError):
+                          unresolved.append((rule_id, 'invalid security severity'))
+                          continue
+                      if score >= 7.0:
+                          location = result.get('locations', [{}])[0].get('physicalLocation', {})
+                          blocked.append((
+                              rule_id,
+                              score,
+                              location.get('artifactLocation', {}).get('uri', 'unknown'),
+                              location.get('region', {}).get('startLine', 0),
+                          ))
+          print(f'codeql_total={total}')
+          print(f'codeql_critical_high={len(blocked)}')
+          print(f'codeql_unresolved_rule_metadata={len(unresolved)}')
+          for finding in blocked:
+              print(f'{finding[0]}\t{finding[1]}\t{finding[2]}:{finding[3]}')
+          for finding in unresolved:
+              print(f'{finding[0]}\t{finding[1]}')
+          if blocked or unresolved:
+              raise SystemExit(1)
+          PY
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-agent-codeql-${{ matrix.language }}-${{ github.sha }}
+          path: codeql-results/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9

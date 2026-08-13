@@ -1,12 +1,12 @@
 package ping
 
 import (
+	"github.com/PastureStack/node-agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/hostinfo"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/config"
-	"github.com/rancher/agent/utilities/constants"
 	revents "github.com/rancher/event-subscriber/events"
 )
 

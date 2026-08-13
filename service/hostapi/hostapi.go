@@ -7,17 +7,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PastureStack/node-agent/service/hostapi/config"
+	"github.com/PastureStack/node-agent/service/hostapi/console"
+	"github.com/PastureStack/node-agent/service/hostapi/dockersocketproxy"
+	"github.com/PastureStack/node-agent/service/hostapi/events"
+	"github.com/PastureStack/node-agent/service/hostapi/exec"
+	"github.com/PastureStack/node-agent/service/hostapi/logs"
+	"github.com/PastureStack/node-agent/service/hostapi/proxy"
+	"github.com/PastureStack/node-agent/service/hostapi/stats"
+	"github.com/PastureStack/node-agent/service/hostapi/util"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/service/hostapi/config"
-	"github.com/rancher/agent/service/hostapi/console"
-	"github.com/rancher/agent/service/hostapi/dockersocketproxy"
-	"github.com/rancher/agent/service/hostapi/events"
-	"github.com/rancher/agent/service/hostapi/exec"
-	"github.com/rancher/agent/service/hostapi/logs"
-	"github.com/rancher/agent/service/hostapi/proxy"
-	"github.com/rancher/agent/service/hostapi/stats"
-	"github.com/rancher/agent/service/hostapi/util"
 	rclient "github.com/rancher/go-rancher/client"
 	"github.com/rancher/log"
 	"github.com/rancher/websocket-proxy/backend"
@@ -58,16 +58,16 @@ func StartUp() {
 		break
 	}
 	for {
-		rancherClient, err := util.GetRancherClient()
+		platformClient, err := util.GetPlatformClient()
 		if err != nil {
-			log.Errorf("Failed to get rancher client for host-api startup: %v", err)
+			log.Errorf("Failed to get platform client for host-api startup: %v", err)
 			time.Sleep(time.Duration(5) * time.Second)
 			continue
 		}
 		tokenRequest := &rclient.HostApiProxyToken{
 			ReportedUuid: config.Config.HostUUID,
 		}
-		tokenResponse, err := getConnectionToken(0, tokenRequest, rancherClient)
+		tokenResponse, err := getConnectionToken(0, tokenRequest, platformClient)
 		if err != nil {
 			log.Errorf("Failed to get connection token for host-api startup: %v", err)
 			time.Sleep(time.Duration(5) * time.Second)
@@ -104,12 +104,12 @@ func StartUp() {
 
 const maxWaitOnHostTries = 20
 
-func getConnectionToken(try int, tokenReq *rclient.HostApiProxyToken, rancherClient *rclient.RancherClient) (*rclient.HostApiProxyToken, error) {
+func getConnectionToken(try int, tokenReq *rclient.HostApiProxyToken, platformClient *rclient.RancherClient) (*rclient.HostApiProxyToken, error) {
 	if try >= maxWaitOnHostTries {
 		return nil, errors.New("Reached max retry attempts for getting token")
 	}
 
-	tokenResponse, err := rancherClient.HostApiProxyToken.Create(tokenReq)
+	tokenResponse, err := platformClient.HostApiProxyToken.Create(tokenReq)
 	if err != nil {
 		if apiError, ok := err.(*rclient.ApiError); ok {
 			if apiError.StatusCode == 422 {
@@ -126,7 +126,7 @@ func getConnectionToken(try int, tokenReq *rclient.HostApiProxyToken, rancherCli
 					log.Infof("Host not registered yet. Sleeping 1 second and trying again. reportedUuid=%v Attempt=%v", config.Config.HostUUID, try)
 					time.Sleep(time.Second)
 					try++
-					return getConnectionToken(try, tokenReq, rancherClient) // Recursion!
+					return getConnectionToken(try, tokenReq, platformClient) // Recursion!
 				}
 			} else if apiError.StatusCode == 501 {
 				log.Infof("Host-api proxy disabled. Will not connect.")

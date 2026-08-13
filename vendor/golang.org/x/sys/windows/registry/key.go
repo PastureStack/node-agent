@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build windows
+//go:build windows
 
 // Package registry provides access to the Windows registry.
 //
@@ -19,11 +19,11 @@
 //		log.Fatal(err)
 //	}
 //	fmt.Printf("Windows system root is %q\n", s)
-//
 package registry
 
 import (
 	"io"
+	"runtime"
 	"syscall"
 	"time"
 )
@@ -57,11 +57,12 @@ const (
 	// An application can use these keys as entry points to the registry.
 	// Normally these keys are used in OpenKey to open new keys,
 	// but they can also be used anywhere a Key is required.
-	CLASSES_ROOT   = Key(syscall.HKEY_CLASSES_ROOT)
-	CURRENT_USER   = Key(syscall.HKEY_CURRENT_USER)
-	LOCAL_MACHINE  = Key(syscall.HKEY_LOCAL_MACHINE)
-	USERS          = Key(syscall.HKEY_USERS)
-	CURRENT_CONFIG = Key(syscall.HKEY_CURRENT_CONFIG)
+	CLASSES_ROOT     = Key(syscall.HKEY_CLASSES_ROOT)
+	CURRENT_USER     = Key(syscall.HKEY_CURRENT_USER)
+	LOCAL_MACHINE    = Key(syscall.HKEY_LOCAL_MACHINE)
+	USERS            = Key(syscall.HKEY_USERS)
+	CURRENT_CONFIG   = Key(syscall.HKEY_CURRENT_CONFIG)
+	PERFORMANCE_DATA = Key(syscall.HKEY_PERFORMANCE_DATA)
 )
 
 // Close closes open key k.
@@ -87,16 +88,42 @@ func OpenKey(k Key, path string, access uint32) (Key, error) {
 	return Key(subkey), nil
 }
 
+// OpenRemoteKey opens a predefined registry key on another
+// computer pcname. The key to be opened is specified by k, but
+// can only be one of LOCAL_MACHINE, PERFORMANCE_DATA or USERS.
+// If pcname is "", OpenRemoteKey returns local computer key.
+func OpenRemoteKey(pcname string, k Key) (Key, error) {
+	var err error
+	var p *uint16
+	if pcname != "" {
+		p, err = syscall.UTF16PtrFromString(`\\` + pcname)
+		if err != nil {
+			return 0, err
+		}
+	}
+	var remoteKey syscall.Handle
+	err = regConnectRegistry(p, syscall.Handle(k), &remoteKey)
+	if err != nil {
+		return 0, err
+	}
+	return Key(remoteKey), nil
+}
+
 // ReadSubKeyNames returns the names of subkeys of key k.
 // The parameter n controls the number of returned names,
 // analogous to the way os.File.Readdirnames works.
 func (k Key) ReadSubKeyNames(n int) ([]string, error) {
-	ki, err := k.Stat()
-	if err != nil {
-		return nil, err
-	}
-	names := make([]string, 0, ki.SubKeyCount)
-	buf := make([]uint16, ki.MaxSubKeyLen+1) // extra room for terminating zero byte
+	// RegEnumKeyEx must be called repeatedly and to completion.
+	// During this time, this goroutine cannot migrate away from
+	// its current thread. See https://golang.org/issue/49320 and
+	// https://golang.org/issue/49466.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	names := make([]string, 0)
+	// Registry key size limit is 255 bytes and described there:
+	// https://msdn.microsoft.com/library/windows/desktop/ms724872.aspx
+	buf := make([]uint16, 256) //plus extra room for terminating zero byte
 loopItems:
 	for i := uint32(0); ; i++ {
 		if n > 0 {
@@ -137,7 +164,12 @@ loopItems:
 func CreateKey(k Key, path string, access uint32) (newk Key, openedExisting bool, err error) {
 	var h syscall.Handle
 	var d uint32
-	err = regCreateKeyEx(syscall.Handle(k), syscall.StringToUTF16Ptr(path),
+	var pathPointer *uint16
+	pathPointer, err = syscall.UTF16PtrFromString(path)
+	if err != nil {
+		return 0, false, err
+	}
+	err = regCreateKeyEx(syscall.Handle(k), pathPointer,
 		0, nil, _REG_OPTION_NON_VOLATILE, access, nil, &h, &d)
 	if err != nil {
 		return 0, false, err
@@ -147,7 +179,11 @@ func CreateKey(k Key, path string, access uint32) (newk Key, openedExisting bool
 
 // DeleteKey deletes the subkey path of key k and its values.
 func DeleteKey(k Key, path string) error {
-	return regDeleteKey(syscall.Handle(k), syscall.StringToUTF16Ptr(path))
+	pathPointer, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		return err
+	}
+	return regDeleteKey(syscall.Handle(k), pathPointer)
 }
 
 // A KeyInfo describes the statistics of a key. It is returned by Stat.
@@ -162,7 +198,20 @@ type KeyInfo struct {
 
 // ModTime returns the key's last write time.
 func (ki *KeyInfo) ModTime() time.Time {
-	return time.Unix(0, ki.lastWriteTime.Nanoseconds())
+	lastHigh, lastLow := ki.lastWriteTime.HighDateTime, ki.lastWriteTime.LowDateTime
+	// 100-nanosecond intervals since January 1, 1601
+	hsec := uint64(lastHigh)<<32 + uint64(lastLow)
+	// Convert _before_ gauging; the nanosecond difference between Epoch (00:00:00
+	// UTC, January 1, 1970) and Filetime's zero offset (January 1, 1601) is out
+	// of bounds for int64: -11644473600*1e7*1e2 < math.MinInt64
+	sec := int64(hsec/1e7) - 11644473600
+	nsec := int64(hsec%1e7) * 100
+	return time.Unix(sec, nsec)
+}
+
+// modTimeZero reports whether the key's last write time is zero.
+func (ki *KeyInfo) modTimeZero() bool {
+	return ki.lastWriteTime.LowDateTime == 0 && ki.lastWriteTime.HighDateTime == 0
 }
 
 // Stat retrieves information about the open key k.

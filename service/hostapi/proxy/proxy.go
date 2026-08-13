@@ -3,9 +3,11 @@ package proxy
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,18 +20,48 @@ import (
 	"github.com/rancher/websocket-proxy/common"
 )
 
-var (
-	httpClient = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-		Timeout: 60 * time.Second,
-	}
+const (
+	maxInitialRequestBody = 1 << 20
+	proxyRequestTimeout   = 60 * time.Second
 )
 
 type Handler struct {
+	httpClient *http.Client
+	tlsConfig  *tls.Config
+}
+
+func newProxyTLSConfig(roots *x509.CertPool) *tls.Config {
+	return &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    roots,
+	}
+}
+
+func newProxyHTTPClient(roots *x509.CertPool) *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			Proxy:           nil,
+			TLSClientConfig: newProxyTLSConfig(roots),
+		},
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+		Timeout: proxyRequestTimeout,
+	}
+}
+
+func (s *Handler) client() *http.Client {
+	if s.httpClient != nil {
+		return s.httpClient
+	}
+	return newProxyHTTPClient(nil)
+}
+
+func (s *Handler) secureTLSConfig() *tls.Config {
+	if s.tlsConfig != nil {
+		return s.tlsConfig.Clone()
+	}
+	return newProxyTLSConfig(nil)
 }
 
 func (s *Handler) Handle(key string, initialMessage string, incomingMessages <-chan string, response chan<- common.Message) {
@@ -37,7 +69,7 @@ func (s *Handler) Handle(key string, initialMessage string, incomingMessages <-c
 
 	message, err := readMessage(incomingMessages)
 	if err != nil {
-		log.Error("Invalid content url=%v error=%v", initialMessage, err)
+		log.Errorf("Invalid content url=%v error=%v", initialMessage, err)
 		return
 	}
 
@@ -76,9 +108,7 @@ func (s *Handler) doHijack(message *common.HTTPMessage, key string, incomingMess
 
 	var conn net.Conn
 	if req.URL.Scheme == "https" || req.URL.Scheme == "wss" {
-		conn, err = tls.Dial("tcp", u.Host, &tls.Config{
-			InsecureSkipVerify: true,
-		})
+		conn, err = tls.Dial("tcp", u.Host, s.secureTLSConfig())
 	} else {
 		conn, err = net.Dial("tcp", u.Host)
 	}
@@ -101,11 +131,12 @@ func (s *Handler) doHijack(message *common.HTTPMessage, key string, incomingMess
 	}
 
 	if content > 0 {
-		buf := make([]byte, content, content)
-		if c, err := reader.Read(buf); err != nil || int64(c) != content {
-			log.Errorf("Failed to read initial content for %s error=%v", u.Host, err)
+		body, readErr := readInitialBody(reader, content)
+		if readErr != nil {
+			log.Errorf("Failed to read initial content for %s error=%v", u.Host, readErr)
+			return
 		}
-		req.Body = ioutil.NopCloser(bytes.NewReader(buf))
+		req.Body = io.NopCloser(bytes.NewReader(body))
 	}
 
 	if err := req.Write(conn); err != nil {
@@ -137,14 +168,29 @@ func (s *Handler) doHijack(message *common.HTTPMessage, key string, incomingMess
 	wg.Wait()
 }
 
+func readInitialBody(reader io.Reader, content int64) ([]byte, error) {
+	if content < 0 || content > maxInitialRequestBody {
+		return nil, fmt.Errorf("initial request content exceeds %d bytes", maxInitialRequestBody)
+	}
+	buffer := make([]byte, maxInitialRequestBody)
+	body := buffer[:int(content)]
+	if _, err := io.ReadFull(reader, body); err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
 func setContentLength(req *http.Request) (int64, error) {
 	if lengthString := req.Header.Get("Content-Length"); lengthString != "" {
-		length, err := strconv.Atoi(lengthString)
+		length, err := strconv.ParseInt(lengthString, 10, 64)
 		if err != nil {
 			log.Errorf("Failed to parse length %s error=%v", lengthString, err)
 			return 0, err
 		}
-		req.ContentLength = int64(length)
+		if length < 0 {
+			return 0, errors.New("negative Content-Length is not allowed")
+		}
+		req.ContentLength = length
 	}
 	return req.ContentLength, nil
 }
@@ -167,7 +213,7 @@ func (s *Handler) doHTTP(message *common.HTTPMessage, key string, incomingMessag
 		return
 	}
 
-	resp, err := httpClient.Do(req)
+	resp, err := s.client().Do(req)
 	if err != nil {
 		log.Errorf("Failed to make request error=%v", err)
 		return

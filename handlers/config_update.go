@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/rancher/agent/core/progress"
-	"github.com/rancher/agent/utilities/config"
-	"github.com/rancher/agent/utilities/utils"
+	"github.com/PastureStack/node-agent/core/progress"
+	"github.com/PastureStack/node-agent/utilities/config"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 	"os"
@@ -26,7 +26,10 @@ func (h *ConfigUpdateHandler) ConfigUpdate(event *revents.Event, cli *client.Ran
 
 	for _, v := range utils.InterfaceToArray(event.Data["items"]) {
 		item := utils.InterfaceToMap(v)
-		name := utils.InterfaceToString(item["name"])
+		name, ok := approvedConfigItem(utils.InterfaceToString(item["name"]))
+		if !ok {
+			return fmt.Errorf("unsupported configuration item")
+		}
 		if name != "pyagent" || config.UpdatePyagent() {
 			itemNames = append(itemNames, name)
 		}
@@ -56,4 +59,60 @@ func (h *ConfigUpdateHandler) ConfigUpdate(event *revents.Event, cli *client.Ran
 		return nil
 	}
 	return reply(map[string]interface{}{}, event, cli)
+}
+
+// approvedConfigItem maps every supported first-party item to a string
+// literal.  The configuration script treats arguments beginning with "--"
+// as options, so forwarding arbitrary control-plane input would let an event
+// change the script's behavior even though exec.Command does not invoke a
+// shell.
+func approvedConfigItem(name string) (string, bool) {
+	switch name {
+	case "agent-instance-scripts":
+		return "agent-instance-scripts", true
+	case "agent-instance-startup":
+		return "agent-instance-startup", true
+	case "bootstrap":
+		return "bootstrap", true
+	case "configscripts":
+		return "configscripts", true
+	case "dnsmasq":
+		return "dnsmasq", true
+	case "haproxy":
+		return "haproxy", true
+	case "host-api":
+		return "host-api", true
+	case "host-config":
+		return "host-config", true
+	case "host-iptables":
+		return "host-iptables", true
+	case "host-routes":
+		return "host-routes", true
+	case "hosts":
+		return "hosts", true
+	case "ipsec":
+		return "ipsec", true
+	case "ipsec-hosts":
+		return "ipsec-hosts", true
+	case "iptables":
+		return "iptables", true
+	case "metadata":
+		return "metadata", true
+	case "metadata-answers":
+		return "metadata-answers", true
+	case "monit":
+		return "monit", true
+	case "psk":
+		return "psk", true
+	case "pyagent":
+		return "pyagent", true
+	case "python-agent":
+		return "python-agent", true
+	case "services":
+		return "services", true
+	case "system-stacks":
+		return "system-stacks", true
+	default:
+		return "", false
+	}
 }

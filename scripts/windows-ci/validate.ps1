@@ -1,8 +1,8 @@
-﻿Write-Host "Validating"
+Write-Host "Validating"
 
 cd $PSScriptRoot/../..
 
-$package = Get-ChildItem . -Name *.go -Recurse | Split-Path -Parent | Sort-Object -Unique | Select-String -Pattern "(^\.$|.git|.trash-cache|vendor|bin)" -NotMatch | ForEach-Object { "github.com/rancher/agent/$_" }
+$package = Get-ChildItem . -Name *.go -Recurse | Split-Path -Parent | Sort-Object -Unique | Select-String -Pattern "(^\.$|.git|.trash-cache|vendor|bin)" -NotMatch | ForEach-Object { "github.com/PastureStack/node-agent/$_" }
 
 Write-Host "Running: go vet"
 go vet $package

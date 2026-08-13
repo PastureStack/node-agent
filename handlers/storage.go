@@ -3,15 +3,15 @@ package handlers
 import (
 	"context"
 
+	"github.com/PastureStack/node-agent/core/image"
+	"github.com/PastureStack/node-agent/core/storage"
+	"github.com/PastureStack/node-agent/model"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/PastureStack/node-agent/utilities/utils"
 	engineCli "github.com/docker/docker/client"
 	"github.com/mitchellh/mapstructure"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"github.com/rancher/agent/core/image"
-	"github.com/rancher/agent/core/storage"
-	"github.com/rancher/agent/model"
-	"github.com/rancher/agent/utilities/constants"
-	"github.com/rancher/agent/utilities/utils"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/log"
@@ -54,7 +54,7 @@ func (h *StorageHandler) ImageActivate(event *revents.Event, cli *client.Rancher
 	} else if !ok && err == nil {
 		return errors.New(constants.ImageActivateError + "failed to activate image")
 	}
-	log.Infof("rancher id [%v]: Image with name [%v] has been activated", event.ResourceID, im.Name)
+	log.Infof("platform resource id [%v]: Image with name [%v] has been activated", event.ResourceID, im.Name)
 	return imageStoragePoolMapReply(event, cli)
 }
 
@@ -68,8 +68,8 @@ func (h *StorageHandler) VolumeActivate(event *revents.Event, cli *client.Ranche
 	storagePool := volumeStoragePoolMap.StoragePool
 	progress := utils.GetProgress(event, cli)
 
-	// if its rancher volume, use flexVolume and bypass docker volume plugin
-	if ok, err := storage.IsRancherVolume(volume); err != nil {
+	// Managed platform volumes use flexVolume and bypass the Docker volume plugin.
+	if ok, err := storage.IsPlatformVolume(volume); err != nil {
 		return err
 	} else if ok {
 		err := storage.VolumeActivateFlex(volume)
@@ -82,7 +82,7 @@ func (h *StorageHandler) VolumeActivate(event *revents.Event, cli *client.Ranche
 			return err
 		}
 	}
-	log.Infof("rancher id [%v]: Volume with name [%v] has been activated", event.ResourceID, volume.Name)
+	log.Infof("platform resource id [%v]: Volume with name [%v] has been activated", event.ResourceID, volume.Name)
 	return volumeStoragePoolMapReply(event, cli)
 }
 
@@ -96,7 +96,7 @@ func (h *StorageHandler) VolumeRemove(event *revents.Event, cli *client.RancherC
 	storagePool := volumeStoragePoolMap.StoragePool
 	progress := utils.GetProgress(event, cli)
 
-	if ok, err := storage.IsRancherVolume(volume); err != nil {
+	if ok, err := storage.IsPlatformVolume(volume); err != nil {
 		return err
 	} else if ok {
 		// we need to make sure the reference is cleaned up in docker, so if it exists in docker then clean up in docker first
@@ -119,6 +119,6 @@ func (h *StorageHandler) VolumeRemove(event *revents.Event, cli *client.RancherC
 			return err
 		}
 	}
-	log.Infof("rancher id [%v]: Volume with name [%v] has been removed", event.ResourceID, volume.Name)
+	log.Infof("platform resource id [%v]: Volume with name [%v] has been removed", event.ResourceID, volume.Name)
 	return volumeStoragePoolMapReply(event, cli)
 }

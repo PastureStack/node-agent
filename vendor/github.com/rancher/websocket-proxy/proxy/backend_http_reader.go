@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/rancher/websocket-proxy/common"
+	"github.com/sirupsen/logrus"
 )
 
 type BackendHTTPReader struct {
