@@ -3,7 +3,7 @@ package hostinfo
 import (
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/v4/disk"
 	"math"
 	"strings"
 )

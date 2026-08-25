@@ -27,7 +27,7 @@ jobs:
             build-mode: none
     steps:
       - name: Check out candidate
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -37,11 +37,18 @@ jobs:
         run: |
           set -euo pipefail
           test -z "$(git status --porcelain)"
-          test "$(git rev-list --count c8663d12dd253ef13258750dca056d4b1219fc10..HEAD)" -eq 1
+          git merge-base --is-ancestor c8663d12dd253ef13258750dca056d4b1219fc10 HEAD
           grep -Fq 'VERSION_OVERRIDE: v0.13.23' .github/workflows/validate.yml
 
+      - name: Install the release Go toolchain
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.27.0
+          check-latest: false
+          cache: false
+
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@c16c0f3f2812ec4bb3750a5ed64873fe2ce0fbef
+        uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
@@ -55,18 +62,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export GO111MODULE=off
-          export GOPATH="$RUNNER_TEMP/gopath"
-          source_root="$GOPATH/src/github.com/PastureStack/node-agent"
-          mkdir -p "$(dirname "$source_root")" "$GITHUB_WORKSPACE/bin"
-          ln -s "$GITHUB_WORKSPACE" "$source_root"
-          cd "$source_root"
+          export GOFLAGS=-mod=vendor
+          mkdir -p "$GITHUB_WORKSPACE/bin"
           CGO_ENABLED=0 go build -trimpath -tags 'netgo osusergo' \
             -ldflags='-w -s -X main.VERSION=v0.13.23' \
             -o "$GITHUB_WORKSPACE/bin/node-agent" ./
 
       - name: Analyze without publishing temporary alerts
-        uses: github/codeql-action/analyze@c16c0f3f2812ec4bb3750a5ed64873fe2ce0fbef
+        uses: github/codeql-action/analyze@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         with:
           category: '/language:${{ matrix.language }}'
           upload: never

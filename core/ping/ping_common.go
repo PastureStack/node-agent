@@ -7,18 +7,18 @@ import (
 	"strings"
 	"time"
 
+	"context"
 	"github.com/PastureStack/node-agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/log"
-	"github.com/shirou/gopsutil/disk"
-	"golang.org/x/net/context"
+	"github.com/shirou/gopsutil/v4/disk"
 )
 
 const (

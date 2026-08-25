@@ -6,13 +6,13 @@ import (
 	"net/url"
 	"time"
 
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/service/hostapi/config"
 	"github.com/PastureStack/node-agent/service/hostapi/events"
-	"github.com/docker/docker/api/types"
+	"github.com/PastureStack/websocket-proxy/backend"
+	"github.com/PastureStack/websocket-proxy/common"
 	"github.com/rancher/log"
-	"github.com/rancher/websocket-proxy/backend"
-	"github.com/rancher/websocket-proxy/common"
-	"golang.org/x/net/context"
 )
 
 type ContainerStatsHandler struct {

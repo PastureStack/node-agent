@@ -7,22 +7,22 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/PastureStack/node-agent/core/hostinfo"
 	"github.com/PastureStack/node-agent/core/storage"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	dutils "github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/blkiodev"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/blkiodev"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	"github.com/pkg/errors"
 	"github.com/rancher/log"
 )
@@ -122,7 +122,7 @@ func setupNetworking(instance model.Instance, host model.Host, config *container
 	return nil
 }
 
-func setupMacAndIP(instance model.Instance, config *container.Config, setMac bool, setHostname bool) {
+func setupMacAndIP(instance model.Instance, config *container.Config, _ bool, setHostname bool) {
 	/*
 		Configures the mac address and primary ip address for the the supplied
 		container. The macAddress is configured directly as part of the native
@@ -148,9 +148,8 @@ func setupMacAndIP(instance model.Instance, config *container.Config, setMac boo
 	}
 
 	if macAddress != "" {
-		if setMac {
-			config.MacAddress = macAddress
-		}
+		// Current Moby configures the MAC on a network endpoint. The label is
+		// retained here; setupNetworkingConfig binds the same value to bridge.
 		utils.AddLabel(config, constants.PlatformMacLabel, macAddress)
 	}
 
@@ -248,8 +247,8 @@ func setupPortsNetwork(instance model.Instance, config *container.Config,
 	*/
 	if !portsSupported {
 		hostConfig.PublishAllPorts = false
-		config.ExposedPorts = map[nat.Port]struct{}{}
-		hostConfig.PortBindings = nat.PortMap{}
+		config.ExposedPorts = network.PortSet{}
+		hostConfig.PortBindings = network.PortMap{}
 	}
 }
 
@@ -299,7 +298,7 @@ func setupLinksNetwork(instance model.Instance, config *container.Config,
 }
 
 // this method convert fields data to fields in host configuration
-func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.HostConfig) {
+func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.HostConfig) error {
 
 	hostConfig.ExtraHosts = fields.ExtraHosts
 
@@ -329,7 +328,14 @@ func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.Ho
 
 	hostConfig.Devices = deviceMappings
 
-	hostConfig.DNS = fields.DNS
+	hostConfig.DNS = make([]netip.Addr, 0, len(fields.DNS))
+	for _, value := range fields.DNS {
+		address, err := netip.ParseAddr(value)
+		if err != nil {
+			return errors.Wrapf(err, "invalid DNS address %q", value)
+		}
+		hostConfig.DNS = append(hostConfig.DNS, address)
+	}
 
 	hostConfig.DNSSearch = fields.DNSSearch
 
@@ -359,7 +365,9 @@ func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.Ho
 
 	hostConfig.GroupAdd = fields.GroupAdd
 
-	hostConfig.KernelMemory = fields.KernelMemory
+	if fields.KernelMemory != 0 {
+		log.Warn("Ignoring obsolete kernelMemory setting; current Moby and cgroup v2 no longer support a separate kernel-memory limit")
+	}
 
 	hostConfig.MemorySwap = fields.MemorySwap
 
@@ -387,15 +395,22 @@ func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.Ho
 
 	hostConfig.StorageOpt = fields.StorageOpt
 
-	hostConfig.PidsLimit = fields.PidsLimit
+	if fields.PidsLimit != 0 {
+		pidsLimit := fields.PidsLimit
+		hostConfig.PidsLimit = &pidsLimit
+	}
 
-	hostConfig.DiskQuota = fields.DiskQuota
+	if fields.DiskQuota != 0 {
+		log.Warn("Ignoring obsolete diskQuota setting; current Moby no longer exposes the legacy container disk-quota field")
+	}
 
 	hostConfig.Cgroup = fields.Cgroup
 
 	hostConfig.CgroupParent = fields.CgroupParent
 
 	hostConfig.UsernsMode = fields.UsernsMode
+
+	return nil
 }
 
 func setupComputeResourceFields(hostConfig *container.HostConfig, instance model.Instance) {

@@ -12,7 +12,6 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/PastureStack/node-agent/utilities/constants"
-	gofqdn "github.com/ShowMax/go-fqdn"
 )
 
 // Hook up gocheck into the "go test" runner.
@@ -177,14 +176,4 @@ func (s *ConfigTestSuite) TestManagedExecutionPathsAcceptApprovedOverrides(c *ch
 	c.Assert(Sh(), check.Equals, "/var/lib/cattle/config.sh")
 	c.Assert(KeyFile(), check.Equals, "/var/lib/cattle/etc/ssl/host.key")
 	c.Assert(Stamp(), check.Equals, "/var/lib/cattle/.pyagent-stamp")
-}
-
-func (s *ConfigTestSuite) unTestHostName(c *check.C) {
-	// by default getFQDNLinux should just have the same with getFQDNByIP
-	fqdn1, err := getFQDNLinux()
-	if err != nil {
-		c.Fatal(err)
-	}
-	fqdn2 := gofqdn.Get()
-	c.Assert(fqdn1, check.Equals, fqdn2)
 }

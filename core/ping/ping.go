@@ -2,10 +2,10 @@ package ping
 
 import (
 	"github.com/PastureStack/node-agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/PastureStack/node-agent/utilities/constants"
-	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	revents "github.com/rancher/event-subscriber/events"
 )

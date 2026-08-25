@@ -1,13 +1,12 @@
 package model
 
 import (
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/blkiodev"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
+	"github.com/moby/moby/api/types/blkiodev"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/strslice"
 )
 
 type Instance struct {
@@ -74,7 +73,7 @@ type ContainerJSON struct {
 	HostnamePath    string
 	HostsPath       string
 	LogPath         string
-	Node            types.ContainerNode `json:",omitempty"`
+	Node            ContainerNode `json:",omitempty"`
 	Name            string
 	RestartCount    int
 	Driver          string
@@ -83,12 +82,27 @@ type ContainerJSON struct {
 	AppArmorProfile string
 	ExecIDs         []string
 	HostConfig      HostConfig
-	GraphDriver     types.GraphDriverData
+	GraphDriver     GraphDriverData
 	SizeRw          int64 `json:",omitempty"`
 	SizeRootFs      int64 `json:",omitempty"`
-	Mounts          []types.MountPoint
+	Mounts          []container.MountPoint
 	Config          container.Config
-	NetworkSettings types.NetworkSettings
+	NetworkSettings container.NetworkSettings
+}
+
+type ContainerNode struct {
+	ID        string
+	IPAddress string `json:"IP"`
+	Addr      string
+	Name      string
+	Cpus      int
+	Memory    int64
+	Labels    map[string]string
+}
+
+type GraphDriverData struct {
+	Name string
+	Data map[string]string
 }
 
 type HostConfig struct {

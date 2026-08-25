@@ -8,18 +8,18 @@ import (
 	"testing"
 	"time"
 
+	"context"
+	docker "github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/service/hostapi/config"
 	"github.com/PastureStack/node-agent/service/hostapi/events"
 	"github.com/PastureStack/node-agent/service/hostapi/testutils"
-	"github.com/docker/distribution/context"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	docker "github.com/docker/docker/client"
+	"github.com/PastureStack/websocket-proxy/backend"
+	"github.com/PastureStack/websocket-proxy/proxy"
+	wsp_utils "github.com/PastureStack/websocket-proxy/testutils"
 	"github.com/gorilla/websocket"
+	"github.com/moby/moby/api/types/container"
 	"github.com/rancher/log"
-	"github.com/rancher/websocket-proxy/backend"
-	"github.com/rancher/websocket-proxy/proxy"
-	wsp_utils "github.com/rancher/websocket-proxy/testutils"
 	"gopkg.in/check.v1"
 )
 
@@ -111,7 +111,7 @@ func (s *LogsTestSuite) setupWebsocketProxy() {
 	}
 
 	log.Infof("Starting websocket proxy. Listening on [%s], proxying to the control-platform API at [%s].",
-		conf.ListenAddr, conf.CattleAddr)
+		conf.ListenAddr, conf.PlatformAddr)
 
 	go p.StartProxy()
 	time.Sleep(time.Second)

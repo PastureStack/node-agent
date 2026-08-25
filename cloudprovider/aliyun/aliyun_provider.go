@@ -1,16 +1,28 @@
 package aliyun
 
 import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
 	"time"
-
-	"github.com/loganhz/aliyungo/metadata"
 
 	"github.com/PastureStack/node-agent/cloudprovider"
 	"github.com/PastureStack/node-agent/core/hostinfo"
 )
 
 const (
-	aliyunTag = "aliyun"
+	aliyunTag                 = "aliyun"
+	aliyunMetadataBaseURL     = "http://100.100.100.200/latest/"
+	aliyunTokenPath           = "api/token"
+	aliyunRegionPath          = "meta-data/region-id"
+	aliyunZonePath            = "meta-data/zone-id"
+	aliyunTokenTTLHeader      = "X-aliyun-ecs-metadata-token-ttl-seconds"
+	aliyunTokenHeader         = "X-aliyun-ecs-metadata-token"
+	aliyunTokenTTL            = "60"
+	aliyunMetadataTimeout     = 5 * time.Second
+	aliyunMetadataMaxResponse = 4096
 )
 
 type Provider struct {
@@ -20,12 +32,12 @@ type Provider struct {
 }
 
 type metadataClient interface {
-	Region() (string, error)
-	Zone() (string, error)
+	RegionAndZone(context.Context) (string, string, error)
 }
 
 type metadataClientImpl struct {
-	client *metadata.MetaData
+	client  *http.Client
+	baseURL string
 }
 
 func init() {
@@ -35,17 +47,68 @@ func init() {
 	})
 }
 
-func (m metadataClientImpl) Region() (string, error) {
-	return m.client.Region()
+func (m metadataClientImpl) RegionAndZone(ctx context.Context) (string, string, error) {
+	token, err := m.read(ctx, http.MethodPut, aliyunTokenPath, "")
+	if err != nil {
+		return "", "", fmt.Errorf("get Aliyun IMDSv2 token: %w", err)
+	}
+	region, err := m.read(ctx, http.MethodGet, aliyunRegionPath, token)
+	if err != nil {
+		return "", "", fmt.Errorf("get Aliyun region: %w", err)
+	}
+	zone, err := m.read(ctx, http.MethodGet, aliyunZonePath, token)
+	if err != nil {
+		return "", "", fmt.Errorf("get Aliyun zone: %w", err)
+	}
+	return region, zone, nil
 }
 
-func (m metadataClientImpl) Zone() (string, error) {
-	return m.client.Zone()
+func (m metadataClientImpl) read(ctx context.Context, method, path, token string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, method, m.baseURL+path, nil)
+	if err != nil {
+		return "", err
+	}
+	if method == http.MethodPut {
+		req.Header.Set(aliyunTokenTTLHeader, aliyunTokenTTL)
+	} else {
+		req.Header.Set(aliyunTokenHeader, token)
+	}
+
+	resp, err := m.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected HTTP status %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, aliyunMetadataMaxResponse+1))
+	if err != nil {
+		return "", err
+	}
+	if len(body) > aliyunMetadataMaxResponse {
+		return "", fmt.Errorf("response exceeds %d bytes", aliyunMetadataMaxResponse)
+	}
+	value := strings.TrimSpace(string(body))
+	if value == "" {
+		return "", fmt.Errorf("empty metadata response")
+	}
+	return value, nil
 }
 
 func (p *Provider) Init() error {
-	client := metadataClientImpl{metadata.NewMetaData(nil)}
-	p.client = client
+	p.client = metadataClientImpl{
+		baseURL: aliyunMetadataBaseURL,
+		client: &http.Client{
+			Timeout: aliyunMetadataTimeout,
+			Transport: &http.Transport{
+				Proxy: nil,
+			},
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		},
+	}
 	return nil
 }
 
@@ -54,11 +117,10 @@ func (p *Provider) Name() string {
 }
 
 func (p *Provider) GetHostInfo() (i *hostinfo.Info, err error) {
-	zone, err := p.client.Zone()
-	if err != nil {
-		return
-	}
-	region, err := p.client.Region()
+	ctx, cancel := context.WithTimeout(context.Background(), aliyunMetadataTimeout)
+	defer cancel()
+
+	region, zone, err := p.client.RegionAndZone(ctx)
 	if err != nil {
 		return
 	}

@@ -5,10 +5,10 @@ package utils
 
 import (
 	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/PastureStack/node-agent/utilities/docker"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 	"github.com/patrickmn/go-cache"
 	"gopkg.in/check.v1"
 	"testing"

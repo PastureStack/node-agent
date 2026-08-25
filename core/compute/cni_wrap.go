@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/moby/moby/api/types/container"
 )
 
 // This approach was adopted from Weave's weaveproxy component. Proper credit goes to them.

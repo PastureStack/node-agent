@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"strings"
 
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/PastureStack/node-agent/utilities/constants"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	revents "github.com/rancher/event-subscriber/events"
-	"golang.org/x/net/context"
 )
 
 func InstanceHostMapReply(event *revents.Event, client *client.Client, cache *cache.Cache) (map[string]interface{}, error) {
@@ -111,19 +111,23 @@ func getInstanceHostMapData(event *revents.Event, client *client.Client, cache *
 	}
 	if container.Ports != nil && len(container.Ports) > 0 {
 		for _, port := range container.Ports {
-			if strings.Contains(port.IP, ":") {
+			ip := ""
+			if port.IP.IsValid() {
+				ip = port.IP.String()
+			}
+			if strings.Contains(ip, ":") {
 				continue
 			}
 			privatePort := fmt.Sprintf("%v/%v", port.PrivatePort, port.Type)
 			portSpec := privatePort
 			bindAddr := ""
-			if port.IP != "" {
-				bindAddr = fmt.Sprintf("%s:", port.IP)
+			if ip != "" {
+				bindAddr = fmt.Sprintf("%s:", ip)
 			}
 			publicPort := ""
 			if port.PublicPort > 0 {
 				publicPort = fmt.Sprintf("%v:", port.PublicPort)
-			} else if port.IP != "" {
+			} else if ip != "" {
 				publicPort = ":"
 			}
 			portSpec = bindAddr + publicPort + portSpec

@@ -9,17 +9,18 @@ import (
 	"testing"
 	"time"
 
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/blkiodev"
-	"github.com/docker/docker/api/types/container"
-	"github.com/nu7hatch/gouuid"
+	"github.com/google/uuid"
+	"github.com/moby/moby/api/types/blkiodev"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	"github.com/rancher/log"
-	"golang.org/x/net/context"
 	"gopkg.in/check.v1"
 )
 
@@ -69,8 +70,60 @@ func (s *ComputeTestSuite) TestMultiNicsPickMac(c *check.C) {
 	}
 	config := container.Config{Labels: map[string]string{}}
 	setupMacAndIP(instance, &config, true, true)
-	c.Assert(config.MacAddress, check.Equals, "02:03:04:05:06:07")
 	c.Assert(config.Labels, check.DeepEquals, map[string]string{constants.PlatformMacLabel: "02:03:04:05:06:07"})
+	networkConfig := network.NetworkingConfig{}
+	c.Assert(setupNetworkingConfig(&networkConfig, instance), check.IsNil)
+	c.Assert(networkConfig.EndpointsConfig["bridge"].MacAddress.String(), check.Equals, "02:03:04:05:06:07")
+}
+
+func (s *ComputeTestSuite) TestSetupPortsUsesCurrentMobyTypes(c *check.C) {
+	instance := model.Instance{Ports: []model.Port{{
+		PrivatePort: 8080,
+		PublicPort:  18080,
+		Protocol:    "tcp",
+		Data: model.PortData{Fields: model.PortFields{
+			BindAddress: "127.0.0.1",
+		}},
+	}}}
+	config := container.Config{}
+	hostConfig := container.HostConfig{}
+
+	c.Assert(setupPorts(&config, instance, &hostConfig), check.IsNil)
+	port := network.MustParsePort("8080/tcp")
+	_, exposed := config.ExposedPorts[port]
+	c.Assert(exposed, check.Equals, true)
+	c.Assert(hostConfig.PortBindings[port], check.HasLen, 1)
+	c.Assert(hostConfig.PortBindings[port][0].HostIP.String(), check.Equals, "127.0.0.1")
+	c.Assert(hostConfig.PortBindings[port][0].HostPort, check.Equals, "18080")
+}
+
+func (s *ComputeTestSuite) TestSetupPortsRejectsInvalidBindAddress(c *check.C) {
+	instance := model.Instance{Ports: []model.Port{{
+		PrivatePort: 8080,
+		Protocol:    "tcp",
+		Data: model.PortData{Fields: model.PortFields{
+			BindAddress: "not-an-ip-address",
+		}},
+	}}}
+	c.Assert(setupPorts(&container.Config{}, instance, &container.HostConfig{}), check.NotNil)
+}
+
+func (s *ComputeTestSuite) TestSetupFieldsHostConfigUsesCurrentMobyTypes(c *check.C) {
+	fields := model.InstanceFields{
+		DNS:          []string{"1.1.1.1"},
+		PidsLimit:    64,
+		KernelMemory: 1024,
+		DiskQuota:    2048,
+	}
+	hostConfig := container.HostConfig{}
+	c.Assert(setupFieldsHostConfig(fields, &hostConfig), check.IsNil)
+	c.Assert(hostConfig.DNS, check.HasLen, 1)
+	c.Assert(hostConfig.DNS[0].String(), check.Equals, "1.1.1.1")
+	c.Assert(hostConfig.PidsLimit, check.NotNil)
+	c.Assert(*hostConfig.PidsLimit, check.Equals, int64(64))
+
+	fields.DNS = []string{"not-an-ip-address"}
+	c.Assert(setupFieldsHostConfig(fields, &container.HostConfig{}), check.NotNil)
 }
 
 func (s *ComputeTestSuite) TestDefaultDisk(c *check.C) {
@@ -129,7 +182,7 @@ func (s *ComputeTestSuite) TestNoLabelField(c *check.C) {
 }
 
 func (s *ComputeTestSuite) TestDefaultValue(c *check.C) {
-	varName, _ := uuid.NewV4()
+	varName, _ := uuid.NewRandom()
 	legacyVarName := fmt.Sprintf("CATTLE_%v", varName)
 	def := "defaulted"
 	actual := config.DefaultValue(varName.String(), def)

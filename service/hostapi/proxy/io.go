@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/PastureStack/websocket-proxy/common"
 	"github.com/rancher/log"
-	"github.com/rancher/websocket-proxy/common"
 )
 
 type HTTPWriter struct {

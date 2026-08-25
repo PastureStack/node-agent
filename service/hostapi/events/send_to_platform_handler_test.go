@@ -1,9 +1,9 @@
 package events
 
 import (
-	"github.com/docker/distribution/context"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/events"
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
+	"github.com/moby/moby/api/types/events"
 	rclient "github.com/rancher/go-rancher/client"
 	"testing"
 )
@@ -22,7 +22,15 @@ func TestSendToPlatformHandler(t *testing.T) {
 	status := "create"
 	var eventTime int64 = 1426091566
 	hostUUID := "host-123"
-	event := &events.Message{ID: c.ID, From: from, Status: status, Time: eventTime}
+	event := &events.Message{
+		Type:   events.ContainerEventType,
+		Action: events.Action(status),
+		Actor: events.Actor{
+			ID:         c.ID,
+			Attributes: map[string]string{"image": from},
+		},
+		Time: eventTime,
+	}
 	expectedEvent := &rclient.ContainerEvent{
 		ExternalId:        c.ID,
 		ExternalFrom:      from,

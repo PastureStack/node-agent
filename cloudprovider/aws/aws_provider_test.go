@@ -1,12 +1,12 @@
 package aws
 
 import (
+	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/pkg/errors"
 	. "gopkg.in/check.v1"
 
 	"github.com/PastureStack/node-agent/cloudprovider"
@@ -29,14 +29,14 @@ func (s *ComputeTestSuite) SetUpSuite(c *C) {
 
 type fakeReplyImpl struct{}
 
-func (f fakeReplyImpl) getInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error) {
-	return ec2metadata.EC2InstanceIdentityDocument{Region: "fake", AvailabilityZone: "fake"}, nil
+func (f fakeReplyImpl) getInstanceIdentityDocument(context.Context) (instanceIdentity, error) {
+	return instanceIdentity{Region: "fake", AvailabilityZone: "fake"}, nil
 }
 
 type errorReplyImpl struct{}
 
-func (e errorReplyImpl) getInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error) {
-	return ec2metadata.EC2InstanceIdentityDocument{}, errors.New("fake error")
+func (e errorReplyImpl) getInstanceIdentityDocument(context.Context) (instanceIdentity, error) {
+	return instanceIdentity{}, errors.New("fake error")
 }
 
 func (s *ComputeTestSuite) TestGetHostInfo(c *C) {

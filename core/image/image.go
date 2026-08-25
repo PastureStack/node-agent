@@ -7,18 +7,18 @@ import (
 	"fmt"
 	"io"
 
+	engineCli "github.com/PastureStack/node-agent/internal/dockerapi/client"
 	"github.com/PastureStack/node-agent/utilities/docker"
-	engineCli "github.com/docker/docker/client"
 
+	"context"
 	"github.com/PastureStack/node-agent/core/marshaller"
 	"github.com/PastureStack/node-agent/core/progress"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 	"os"
 	"strings"
 )
@@ -49,7 +49,6 @@ func DoImageActivate(image model.Image, storagePool model.StoragePool, progress 
 	rc := image.RegistryCredential
 	auth := types.AuthConfig{
 		Username:      rc.PublicValue,
-		Email:         rc.Data.Fields.Email,
 		ServerAddress: rc.Data.Fields.ServerAddress,
 		Password:      rc.SecretValue,
 	}

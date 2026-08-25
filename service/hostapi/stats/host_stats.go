@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/PastureStack/node-agent/service/hostapi/config"
+	"github.com/PastureStack/websocket-proxy/backend"
+	"github.com/PastureStack/websocket-proxy/common"
 	"github.com/rancher/log"
-	"github.com/rancher/websocket-proxy/backend"
-	"github.com/rancher/websocket-proxy/common"
 )
 
 type HostStatsHandler struct {

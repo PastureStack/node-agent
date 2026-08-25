@@ -4,13 +4,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker/api/types"
-	engineCli "github.com/docker/docker/client"
-	"github.com/mitchellh/mapstructure"
+	"context"
+	engineCli "github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/pkg/errors"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
-	"golang.org/x/net/context"
 )
 
 type portCheckRequest struct {
@@ -122,13 +122,17 @@ func (h *PortCheckHandler) dockerConflicts(requested []portCheckPort) ([]portChe
 		}
 		name := strings.TrimPrefix(inspect.Name, "/")
 		for containerPort, bindings := range inspect.HostConfig.PortBindings {
-			protocol := strings.ToLower(containerPort.Proto())
+			protocol := strings.ToLower(string(containerPort.Proto()))
 			for _, binding := range bindings {
 				publicPort, parseErr := strconv.Atoi(binding.HostPort)
 				if parseErr != nil || publicPort < 1 || publicPort > 65535 {
 					continue
 				}
-				bindAddress := normalizeBindAddress(binding.HostIP)
+				bindAddress := ""
+				if binding.HostIP.IsValid() {
+					bindAddress = binding.HostIP.String()
+				}
+				bindAddress = normalizeBindAddress(bindAddress)
 				if !matchesRequested(requested, bindAddress, publicPort, protocol) {
 					continue
 				}
@@ -137,7 +141,7 @@ func (h *PortCheckHandler) dockerConflicts(requested []portCheckPort) ([]portChe
 					Source:        "docker",
 					ContainerID:   container.ID,
 					ContainerName: name,
-					State:         state,
+					State:         string(state),
 					BindAddress:   bindAddress,
 					PublicPort:    publicPort,
 					Protocol:      protocol,

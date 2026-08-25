@@ -11,8 +11,8 @@ import (
 	"path"
 	"time"
 
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/utilities/constants"
-	"github.com/docker/docker/api/types"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/rancher/log"
@@ -57,14 +57,14 @@ func getDockerNetworkIP(inspect types.ContainerJSON) string {
 	}
 
 	for _, networkName := range []string{"bridge", "host"} {
-		if endpoint := inspect.NetworkSettings.Networks[networkName]; endpoint != nil && endpoint.IPAddress != "" {
-			return endpoint.IPAddress
+		if endpoint := inspect.NetworkSettings.Networks[networkName]; endpoint != nil && endpoint.IPAddress.IsValid() {
+			return endpoint.IPAddress.String()
 		}
 	}
 
 	for _, endpoint := range inspect.NetworkSettings.Networks {
-		if endpoint != nil && endpoint.IPAddress != "" {
-			return endpoint.IPAddress
+		if endpoint != nil && endpoint.IPAddress.IsValid() {
+			return endpoint.IPAddress.String()
 		}
 	}
 

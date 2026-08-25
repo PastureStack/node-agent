@@ -1,9 +1,9 @@
 package events
 
 import (
-	"github.com/docker/distribution/context"
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/client"
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/moby/moby/api/types/events"
 	"github.com/rancher/event-subscriber/locks"
 	rclient "github.com/rancher/go-rancher/client"
 	"github.com/rancher/log"
@@ -16,21 +16,27 @@ type SendToPlatformHandler struct {
 }
 
 func (h *SendToPlatformHandler) Handle(event *events.Message) error {
+	status := string(event.Action)
+	id := event.Actor.ID
+	from := ""
+	if event.Actor.Attributes != nil {
+		from = event.Actor.Attributes["image"]
+	}
 	// The compatibility state watcher sends a simulated event to initiate IP injection.
 	// This event should not be sent.
-	if event.From == simulatedEvent {
+	if from == simulatedEvent {
 		return nil
 	}
 
 	// Note: event.ID == container's ID
-	lock := locks.Lock(event.Status + event.ID)
+	lock := locks.Lock(status + id)
 	if lock == nil {
-		log.Debugf("Container locked. Can't run SendToPlatformHandler. Event: [%s], ID: [%s]", event.Status, event.ID)
+		log.Debugf("Container locked. Can't run SendToPlatformHandler. Event: [%s], ID: [%s]", status, id)
 		return nil
 	}
 	defer lock.Unlock()
 
-	container, err := h.client.ContainerInspect(context.Background(), event.ID)
+	container, err := h.client.ContainerInspect(context.Background(), id)
 	if err != nil {
 		if ok := client.IsErrContainerNotFound(err); !ok {
 			return err
@@ -38,9 +44,9 @@ func (h *SendToPlatformHandler) Handle(event *events.Message) error {
 	}
 
 	containerEvent := &rclient.ContainerEvent{
-		ExternalStatus:    event.Status,
-		ExternalId:        event.ID,
-		ExternalFrom:      event.From,
+		ExternalStatus:    status,
+		ExternalId:        id,
+		ExternalFrom:      from,
 		ExternalTimestamp: int64(event.Time),
 		ReportedHostUuid:  h.hostUUID,
 	}

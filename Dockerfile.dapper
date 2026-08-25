@@ -42,9 +42,9 @@ RUN set -eux; \
 
 RUN git config --system --add safe.directory '*'
 
-ARG GO_VERSION=1.26.5
-ARG GO_SHA256_amd64=5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053
-ARG GO_SHA256_arm=6dae9edab81c13bccf962dec15f1fd2ec26c14a6821b4d2c92dab4130c289d7a
+ARG GO_VERSION=1.27.0
+ARG GO_SHA256_amd64=675c26c449cbb18fc24b74650de1eabbae6e16f64326fd85a283fb3b58280685
+ARG GO_SHA256_arm=e337ecd9c321377c0d8832690c2cb10463447c0bd0e65e2e3413dfff63a3435b
 ARG PIP_VERSION=26.1.2
 ARG SETUPTOOLS_VERSION=83.0.0
 ARG WHEEL_VERSION=0.47.0
@@ -52,7 +52,7 @@ ARG TOX_VERSION=4.57.2
 ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm=armv6l GOLANG_ARCH=GOLANG_ARCH_${ARCH} \
     GO_SHA256=GO_SHA256_${ARCH} \
     GOPATH=/go PATH=/opt/tox/bin:/go/bin:/usr/local/go/bin:${PATH} SHELL=/bin/bash \
-    GO111MODULE=off GO15VENDOREXPERIMENT=1
+    GO111MODULE=on GOFLAGS=-mod=vendor
 
 RUN curl -fsSL -o /tmp/go.tgz "https://go.dev/dl/go${GO_VERSION}.linux-${!GOLANG_ARCH}.tar.gz" && \
     echo "${!GO_SHA256}  /tmp/go.tgz" | sha256sum -c - && \
@@ -81,9 +81,6 @@ RUN mkdir -p /opt/node-agent-wheelhouse && \
         --dest /opt/node-agent-wheelhouse \
         --requirement /tmp/node-agent-test-requirements.lock && \
     rm -f /tmp/node-agent-test-requirements.lock
-
-ARG GOLINT_VERSION=v0.0.0-20241112194109-818c5a804067
-RUN GO111MODULE=on GOBIN=/go/bin go install "golang.org/x/lint/golint@${GOLINT_VERSION}"
 
 ENV DAPPER_SOURCE=/go/src/github.com/PastureStack/node-agent
 ENV DAPPER_OUTPUT="bin dist"

@@ -7,3 +7,10 @@ Preferred PastureStack settings use `PLATFORM_*` and `PASTURESTACK_HOME`. Histor
 Operator lifecycle messages support `PASTURESTACK_LOCALE=en-US` and `PASTURESTACK_LOCALE=zh-TW`. Event payloads, resource identifiers, labels, errors returned through the API, and Docker output are deliberately not translated.
 
 Before release, validate registration, restart, container lifecycle, CNI metadata, DNS search, storage attach/mount/unmount, Windows service migration, and rollback against an isolated compatibility control plane.
+
+Current Moby no longer accepts the legacy standalone `kernelMemory` and
+`diskQuota` create fields. Node Agent keeps accepting those historical event
+fields as logged no-ops so an old control plane cannot block otherwise valid
+container creation. PID limits, DNS addresses, port bindings, and MAC addresses
+are translated to the current Moby resource, `netip`, port-map, and endpoint
+types.

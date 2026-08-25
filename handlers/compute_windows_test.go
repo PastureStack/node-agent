@@ -4,10 +4,10 @@
 package handlers
 
 import (
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/api/types"
-	"golang.org/x/net/context"
 	"gopkg.in/check.v1"
 )
 

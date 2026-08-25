@@ -2,7 +2,7 @@ package events
 
 import (
 	"fmt"
-	"github.com/docker/docker/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
 	"os"
 )
 

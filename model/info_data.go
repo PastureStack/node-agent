@@ -1,8 +1,8 @@
 package model
 
-import "github.com/docker/docker/api/types"
+import "github.com/moby/moby/api/types/system"
 
 type InfoData struct {
-	Info    types.Info
-	Version types.Version
+	Info    system.Info
+	Version system.VersionResponse
 }

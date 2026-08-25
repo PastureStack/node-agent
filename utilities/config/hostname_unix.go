@@ -4,10 +4,13 @@
 package config
 
 import (
-	"github.com/PastureStack/node-agent/utilities/constants"
-	gofqdn "github.com/ShowMax/go-fqdn"
-	"github.com/pkg/errors"
+	"net"
+	"os"
 	"os/exec"
+	"strings"
+
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/pkg/errors"
 )
 
 func Hostname() (string, error) {
@@ -21,12 +24,20 @@ func Hostname() (string, error) {
 func getFQDNLinux() (string, error) {
 	cmd := exec.Command("/bin/hostname", "-f")
 	output, err := cmd.CombinedOutput()
-	if err != nil {
-		// if command line doesn't work, try to look up by IP
-		fqdn := gofqdn.Get()
-		return fqdn, nil
+	if err == nil {
+		if fqdn := strings.TrimSpace(string(output)); fqdn != "" {
+			return fqdn, nil
+		}
 	}
-	fqdn := string(output)
-	fqdn = fqdn[:len(fqdn)-1]
-	return fqdn, nil
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", err
+	}
+	if fqdn, lookupErr := net.LookupCNAME(hostname); lookupErr == nil {
+		if fqdn = strings.TrimSuffix(strings.TrimSpace(fqdn), "."); fqdn != "" {
+			return fqdn, nil
+		}
+	}
+	return hostname, nil
 }

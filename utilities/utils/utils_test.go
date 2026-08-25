@@ -3,7 +3,7 @@ package utils
 import (
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 )
 
 func TestIsNodeAgentContainer(t *testing.T) {

@@ -5,11 +5,11 @@ import (
 
 	"github.com/PastureStack/node-agent/core/image"
 	"github.com/PastureStack/node-agent/core/storage"
+	engineCli "github.com/PastureStack/node-agent/internal/dockerapi/client"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	engineCli "github.com/docker/docker/client"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	revents "github.com/rancher/event-subscriber/events"

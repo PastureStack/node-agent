@@ -2,12 +2,13 @@ package handlers
 
 import (
 	"errors"
+	"net/netip"
 	"testing"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/go-connections/nat"
-	"golang.org/x/net/context"
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 )
 
 type fakePortDockerClient struct {
@@ -58,8 +59,8 @@ func TestDockerConflictsIncludeStoppedContainerBindings(t *testing.T) {
 					ID:    "container-1",
 					Name:  "/stopped-owner",
 					State: &types.ContainerState{Status: "exited"},
-					HostConfig: &container.HostConfig{PortBindings: nat.PortMap{
-						nat.Port("22/tcp"): []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: "2201"}},
+					HostConfig: &container.HostConfig{PortBindings: network.PortMap{
+						network.MustParsePort("22/tcp"): []network.PortBinding{{HostIP: netip.MustParseAddr("0.0.0.0"), HostPort: "2201"}},
 					}},
 				},
 			},

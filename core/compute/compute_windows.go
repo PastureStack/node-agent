@@ -6,13 +6,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/model"
 	dutils "github.com/PastureStack/node-agent/utilities/docker"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 )
 
 const (
@@ -56,15 +55,15 @@ func setupNetworking(instance model.Instance, host model.Host, config *container
 		switch instance.Nics[0].Network.Kind {
 		case "transparent":
 			hostConfig.PublishAllPorts = false
-			config.ExposedPorts = map[nat.Port]struct{}{}
-			hostConfig.PortBindings = nat.PortMap{}
+			config.ExposedPorts = network.PortSet{}
+			hostConfig.PortBindings = network.PortMap{}
 		default:
 		}
 	}
 	return nil
 }
 
-func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.HostConfig) {
+func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.HostConfig) error {
 
 	hostConfig.LogConfig.Type = fields.LogConfig.Driver
 
@@ -81,6 +80,8 @@ func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.Ho
 	hostConfig.IOMaximumIOps = fields.IOMaximumIOps
 
 	hostConfig.IOMaximumBandwidth = fields.IOMaximumBandwidth
+
+	return nil
 }
 
 func setupPlatformFlexVolume(instance model.Instance, hostConfig *container.HostConfig) error {

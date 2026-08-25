@@ -14,18 +14,18 @@ import (
 	"syscall"
 	"time"
 
+	"context"
 	"github.com/PastureStack/node-agent/core/progress"
+	engineCli "github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/PastureStack/node-agent/utilities/constants"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	engineCli "github.com/docker/docker/client"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/moby/moby/api/types/container"
 	"github.com/pkg/errors"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
-	"golang.org/x/net/context"
 )
 
 func GetInstanceAndHost(event *revents.Event) (model.Instance, model.Host, error) {

@@ -2,6 +2,8 @@ package compute
 
 import (
 	"fmt"
+	"net"
+	"net/netip"
 	urls "net/url"
 	"os"
 	"strconv"
@@ -9,21 +11,20 @@ import (
 	"sync"
 	"time"
 
+	"context"
 	"github.com/PastureStack/node-agent/core/image"
 	"github.com/PastureStack/node-agent/core/progress"
 	"github.com/PastureStack/node-agent/core/storage"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/model"
 	configuration "github.com/PastureStack/node-agent/utilities/config"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	"github.com/pkg/errors"
 	"github.com/rancher/log"
-	"golang.org/x/net/context"
 )
 
 var (
@@ -78,8 +79,8 @@ func getImageTag(instance model.Instance) (string, error) {
 func initializeMaps(config *container.Config, hostConfig *container.HostConfig) {
 	config.Labels = make(map[string]string)
 	config.Volumes = make(map[string]struct{})
-	config.ExposedPorts = make(map[nat.Port]struct{})
-	hostConfig.PortBindings = make(map[nat.Port][]nat.PortBinding)
+	config.ExposedPorts = make(network.PortSet)
+	hostConfig.PortBindings = make(network.PortMap)
 	hostConfig.StorageOpt = make(map[string]string)
 	hostConfig.Tmpfs = make(map[string]string)
 	hostConfig.Sysctls = make(map[string]string)
@@ -89,25 +90,35 @@ func setupHostname(config *container.Config, instance model.Instance) {
 	config.Hostname = instance.Hostname
 }
 
-func setupPorts(config *container.Config, instance model.Instance, hostConfig *container.HostConfig) {
+func setupPorts(config *container.Config, instance model.Instance, hostConfig *container.HostConfig) error {
 	ports := []model.Port{}
-	exposedPorts := map[nat.Port]struct{}{}
-	bindings := nat.PortMap{}
+	exposedPorts := network.PortSet{}
+	bindings := network.PortMap{}
 	if instance.Ports != nil && len(instance.Ports) > 0 {
 		for _, port := range instance.Ports {
 			ports = append(ports, model.Port{PrivatePort: port.PrivatePort, Protocol: port.Protocol})
 			if port.PrivatePort != 0 {
-				bind := nat.Port(fmt.Sprintf("%v/%v", port.PrivatePort, port.Protocol))
+				bind, err := network.ParsePort(fmt.Sprintf("%v/%v", port.PrivatePort, port.Protocol))
+				if err != nil {
+					return errors.Wrap(err, "invalid private port")
+				}
 				bindAddr := port.Data.Fields.BindAddress
+				var hostIP netip.Addr
+				if bindAddr != "" {
+					hostIP, err = netip.ParseAddr(bindAddr)
+					if err != nil {
+						return errors.Wrap(err, "invalid port bind address")
+					}
+				}
 				if _, ok := bindings[bind]; !ok {
-					bindings[bind] = []nat.PortBinding{
+					bindings[bind] = []network.PortBinding{
 						{
-							HostIP:   bindAddr,
+							HostIP:   hostIP,
 							HostPort: utils.ConvertPortToString(port.PublicPort),
 						},
 					}
 				} else {
-					bindings[bind] = append(bindings[bind], nat.PortBinding{HostIP: bindAddr,
+					bindings[bind] = append(bindings[bind], network.PortBinding{HostIP: hostIP,
 						HostPort: utils.ConvertPortToString(port.PublicPort)})
 				}
 				exposedPorts[bind] = struct{}{}
@@ -121,6 +132,7 @@ func setupPorts(config *container.Config, instance model.Instance, hostConfig *c
 	if len(bindings) > 0 {
 		hostConfig.PortBindings = bindings
 	}
+	return nil
 }
 
 func getDockerRoot(client *client.Client) string {
@@ -346,7 +358,36 @@ func setupLegacyCommand(config *container.Config, fields model.InstanceFields, c
 	}
 }
 
-func setupNetworkingConfig(networkConfig *network.NetworkingConfig, instance model.Instance) {
+func setupNetworkingConfig(networkConfig *network.NetworkingConfig, instance model.Instance) error {
+	if len(instance.Nics) == 0 {
+		return nil
+	}
+
+	switch instance.Nics[0].Network.Kind {
+	case "dockerHost", "dockerNone", "dockerContainer", "cni":
+		return nil
+	}
+
+	macAddress := ""
+	deviceNumber := -1
+	for _, nic := range instance.Nics {
+		if nic.MacAddress != "" && (deviceNumber == -1 || nic.DeviceNumber < deviceNumber) {
+			macAddress = nic.MacAddress
+			deviceNumber = nic.DeviceNumber
+		}
+	}
+	if macAddress == "" {
+		return nil
+	}
+
+	parsed, err := net.ParseMAC(macAddress)
+	if err != nil {
+		return errors.Wrap(err, "invalid primary network MAC address")
+	}
+	networkConfig.EndpointsConfig = map[string]*network.EndpointSettings{
+		"bridge": {MacAddress: network.HardwareAddr(parsed)},
+	}
+	return nil
 }
 
 func setupLabels(labels map[string]string, config *container.Config) {

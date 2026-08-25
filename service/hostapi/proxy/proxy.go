@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PastureStack/websocket-proxy/backend"
+	"github.com/PastureStack/websocket-proxy/common"
 	"github.com/rancher/log"
-	"github.com/rancher/websocket-proxy/backend"
-	"github.com/rancher/websocket-proxy/common"
 )
 
 const (

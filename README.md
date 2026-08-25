@@ -8,7 +8,7 @@ PastureStack is an independent community effort to preserve, audit, and moderniz
 
 ## Project status
 
-This is a migration proof of concept. The existing Ubuntu 26.04, Go 1.26.5, modern Docker test harness, runtime hardening, and dependency maintenance are retained. Product-owned import paths, binaries, archives, images, Windows service names, and operator messages use PastureStack naming. Python test dependencies are fully pinned and cached in the disposable build image so clean-checkout tests do not depend on live PyPI availability. Release packaging is manual; no CI/CD or automatic production deployment is enabled.
+This is a migration proof of concept. The existing Ubuntu 26.04, Go 1.27.0, modern Docker test harness, runtime hardening, and dependency maintenance are retained. Product-owned import paths, binaries, archives, images, Windows service names, and operator messages use PastureStack naming. Python test dependencies are fully pinned and cached in the disposable build image so clean-checkout tests do not depend on live PyPI availability. Release packaging is manual; no CI/CD or automatic production deployment is enabled.
 
 ## Configuration
 
@@ -26,6 +26,12 @@ make package-image IMAGE_NAME=pasturestack/node-agent TAG=poc
 ```
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
+
+The authoritative build is Go modules with the checked-in `vendor/` tree. The
+runtime dependency baseline uses Go 1.27, AWS SDK for Go v2, Moby API 1.55 and
+client 0.5, gopsutil v4.26, mapstructure v2.5, netlink v1.3, and netns v0.0.5.
+The retired AWS SDK v1, Aliyungo, root Docker module, GOPATH/Godeps, and Trash
+dependency paths are not part of the build.
 
 For the reviewed `0.13.23` compatibility release, `VERSION_OVERRIDE=v0.13.23 CROSS=1 make package` produces the deterministic flat assets `node-agent-0.13.23.tar.gz` and `node-agent-0.13.23-windows-amd64.zip`. PastureStack Server serves both from its matching GitHub Release and verifies their SHA-256 entries before use; operators do not need an artifact mirror. The Windows ZIP uses the neutral `pasturestack/` include layout. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported.
 

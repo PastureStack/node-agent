@@ -10,17 +10,16 @@ import (
 	"testing"
 	"time"
 
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
 	"github.com/PastureStack/node-agent/service/hostapi/config"
 	"github.com/PastureStack/node-agent/service/hostapi/events"
 	"github.com/PastureStack/node-agent/service/hostapi/testutils"
-	"github.com/docker/distribution/context"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
+	"github.com/PastureStack/websocket-proxy/backend"
+	"github.com/PastureStack/websocket-proxy/proxy"
+	wsp_utils "github.com/PastureStack/websocket-proxy/testutils"
 	"github.com/gorilla/websocket"
 	"github.com/rancher/log"
-	"github.com/rancher/websocket-proxy/backend"
-	"github.com/rancher/websocket-proxy/proxy"
-	wsp_utils "github.com/rancher/websocket-proxy/testutils"
 )
 
 var privateKey interface{}
@@ -32,7 +31,7 @@ func TestContainerStats(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not connect to docker, err: [%v]", err)
 	}
-	allCtrs, err := c.ContainerList(context.Background(), types.ContainerListOptions{})
+	allCtrs, err := c.ContainerList(context.Background(), client.ContainerListOptions{})
 	if err != nil {
 		t.Fatalf("Error listing all images, err : [%v]", err)
 	}
@@ -100,9 +99,9 @@ func unTestContainerStatSingleContainer(t *testing.T) {
 		t.Fatalf("Could not connect to docker, err: [%v]", err)
 	}
 
-	filter := filters.NewArgs()
+	filter := make(client.Filters)
 	filter.Add("image", "")
-	ctrs, err := c.ContainerList(context.Background(), types.ContainerListOptions{})
+	ctrs, err := c.ContainerList(context.Background(), client.ContainerListOptions{Filters: filter})
 	if err != nil || len(ctrs) == 0 {
 		t.Fatalf("Error listing all images, err : [%v]", err)
 	}
@@ -203,14 +202,14 @@ func setupWebsocketProxy() {
 	p := &proxy.Starter{
 		BackendPaths:  []string{"/v1/connectbackend"},
 		FrontendPaths: []string{"/v1/{logs:logs}/", "/v1/{stats:stats}", "/v1/{stats:stats}/{statsid}", "/v1/exec/"},
-		StatsPaths: []string{"/v1/{hoststats:hoststats(\\/project)?(\\/)?}",
-			"/v1/{containerstats:containerstats(\\/service)?(\\/)?}",
+		StatsPaths: []string{"/v1/{hoststats:hoststats(?:\\/project)?(?:\\/)?}",
+			"/v1/{containerstats:containerstats(?:\\/service)?(?:\\/)?}",
 			"/v1/{containerstats:containerstats}/{containerid}"},
 		Config: conf,
 	}
 
 	log.Infof("Starting websocket proxy. Listening on [%s], proxying to the control-platform API at [%s].",
-		conf.ListenAddr, conf.CattleAddr)
+		conf.ListenAddr, conf.PlatformAddr)
 
 	go p.StartProxy()
 	time.Sleep(time.Second)

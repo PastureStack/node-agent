@@ -5,17 +5,17 @@ import (
 	"os"
 	"time"
 
+	"context"
 	"github.com/PastureStack/node-agent/core/hostinfo"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/docker"
-	"github.com/docker/docker/api/types"
-	goUUID "github.com/nu7hatch/gouuid"
+	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/log"
-	"golang.org/x/net/context"
 )
 
 type Handler struct {
@@ -230,7 +230,7 @@ func replyWithParent(replyData map[string]interface{}, event *revents.Event, par
 }
 
 func getUUID() (string, error) {
-	newUUID, err := goUUID.NewV4()
+	newUUID, err := uuid.NewRandom()
 	if err != nil {
 		return "", errors.Wrap(err, "can't generate uuid")
 	}

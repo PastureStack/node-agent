@@ -8,9 +8,9 @@ import (
 	"net/url"
 
 	"github.com/PastureStack/node-agent/service/hostapi/auth"
+	"github.com/PastureStack/websocket-proxy/backend"
+	"github.com/PastureStack/websocket-proxy/common"
 	"github.com/rancher/log"
-	"github.com/rancher/websocket-proxy/backend"
-	"github.com/rancher/websocket-proxy/common"
 )
 
 const socketLocFmt string = "/var/lib/rancher/vm/%v/vnc"

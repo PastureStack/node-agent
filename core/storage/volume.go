@@ -7,16 +7,16 @@ import (
 	"strings"
 	"time"
 
+	"context"
 	"github.com/PastureStack/node-agent/core/progress"
+	engineCli "github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/api/types"
-	engineCli "github.com/docker/docker/client"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/rancher/log"
-	"golang.org/x/net/context"
 )
 
 const (

@@ -1,8 +1,8 @@
 package events
 
 import (
-	"github.com/docker/docker/api/types"
-	"golang.org/x/net/context"
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 )
 
 type SimpleDockerClient interface {

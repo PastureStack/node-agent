@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
+	"github.com/moby/moby/api/types/events"
 	"github.com/rancher/log"
 )
 
@@ -107,25 +107,13 @@ func (w *worker) doWork(event *events.Message, e *EventRouter) {
 	if event == nil {
 		return
 	}
-	normalizeEvent(event)
-	if handlers, ok := e.handlers[event.Status]; ok {
+	status := string(event.Action)
+	if handlers, ok := e.handlers[status]; ok {
 		log.Debugf("Processing event: %#v", event)
 		for _, handler := range handlers {
 			if err := handler.Handle(event); err != nil {
 				log.Errorf("Error processing event %#v. Error: %v", event, err)
 			}
 		}
-	}
-}
-
-func normalizeEvent(event *events.Message) {
-	if event.Status == "" {
-		event.Status = event.Action
-	}
-	if event.ID == "" {
-		event.ID = event.Actor.ID
-	}
-	if event.From == "" && event.Actor.Attributes != nil {
-		event.From = event.Actor.Attributes["image"]
 	}
 }

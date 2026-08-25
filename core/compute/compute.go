@@ -5,19 +5,19 @@ import (
 	"strings"
 	"time"
 
+	"context"
 	"github.com/PastureStack/node-agent/core/image"
 	"github.com/PastureStack/node-agent/core/progress"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	dutils "github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	"github.com/pkg/errors"
 	"github.com/rancher/log"
-	"golang.org/x/net/context"
 )
 
 func DoInstanceActivate(instance model.Instance, host model.Host, progress *progress.Progress, dockerClient *client.Client, infoData model.InfoData) error {
@@ -58,7 +58,9 @@ func DoInstanceActivate(instance model.Instance, host model.Host, progress *prog
 		utils.AddLabel(&config, constants.ContainerNameLabel, instanceName)
 	}
 
-	setupFieldsHostConfig(instance.Data.Fields, &hostConfig)
+	if err := setupFieldsHostConfig(instance.Data.Fields, &hostConfig); err != nil {
+		return errors.Wrap(err, constants.DoInstanceActivateError+"failed to set host configuration")
+	}
 
 	setupFieldsConfig(instance.Data.Fields, &config)
 
@@ -72,7 +74,9 @@ func DoInstanceActivate(instance model.Instance, host model.Host, progress *prog
 
 	setupHostname(&config, instance)
 
-	setupPorts(&config, instance, &hostConfig)
+	if err := setupPorts(&config, instance, &hostConfig); err != nil {
+		return errors.Wrap(err, constants.DoInstanceActivateError+"failed to set up ports")
+	}
 
 	if err := setupVolumes(&config, instance, &hostConfig, dockerClient, progress); err != nil {
 		return errors.Wrap(err, constants.DoInstanceActivateError+"failed to set up volumes")
@@ -90,7 +94,9 @@ func DoInstanceActivate(instance model.Instance, host model.Host, progress *prog
 
 	setupPlatformConfigURL(instance, &config)
 
-	setupNetworkingConfig(&networkConfig, instance)
+	if err := setupNetworkingConfig(&networkConfig, instance); err != nil {
+		return errors.Wrap(err, constants.DoInstanceActivateError+"failed to set network endpoint configuration")
+	}
 
 	setupDeviceOptions(&hostConfig, instance, infoData)
 

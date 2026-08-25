@@ -1,7 +1,7 @@
 package docker
 
 import (
-	"github.com/docker/docker/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
 )
 
 func GetClient(version string) *client.Client {

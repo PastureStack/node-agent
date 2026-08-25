@@ -1,10 +1,10 @@
 package compute
 
 import (
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 )
 

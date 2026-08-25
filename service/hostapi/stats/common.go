@@ -9,7 +9,7 @@ import (
 
 	"github.com/PastureStack/node-agent/service/hostapi/auth"
 	jwt "github.com/golang-jwt/jwt/v5"
-	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 func pathParts(path string) []string {

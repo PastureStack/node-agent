@@ -1,32 +1,21 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-lint_ignore() {
-    while read line; do
-        fileName=$(echo $line | cut -d':' -f1 )
-        lineNumber=$(echo $line | cut -d':' -f2 )
-        match=$(grep -n golint_ignore $fileName | grep -e "^${lineNumber}:")
-        if [ -z "$match" ]; then
-            echo $line
-        fi
-    done
-}
-
-
-cd $(dirname $0)/..
+cd "$(dirname "$0")/.."
 
 echo Running validation
 
-PACKAGES=". $(find -name '*.go' | xargs -I{} dirname {} |  cut -f2 -d/ | sort -u | grep -Ev '(^\.$|.git|.trash-cache|vendor|bin)' | sed -e 's!^!./!' -e 's!$!/...!')"
-
 echo Running: go vet
-go vet ${PACKAGES}
-echo Running: golint
-for i in ${PACKAGES}; do
-    if [ -n "$(golint $i | grep -v 'should have comment.*or be unexported' | grep -v 'method ById should be ByID' | lint_ignore | tee /dev/stderr)" ]; then
-        failed=true
-    fi
-done
-test -z "$failed"
-echo Running: go fmt
-test -z "$(go fmt ${PACKAGES} | tee /dev/stderr)"
+go vet -mod=vendor ./...
+
+echo Running: gofmt check
+unformatted=$(find . \
+    -path './.git' -prune -o \
+    -path './third_party' -prune -o \
+    -path './vendor' -prune -o \
+    -name '*.go' -type f -print0 \
+    | xargs -0 gofmt -l)
+if [ -n "$unformatted" ]; then
+    printf '%s\n' "$unformatted" >&2
+    exit 1
+fi

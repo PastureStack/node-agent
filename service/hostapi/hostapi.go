@@ -16,11 +16,11 @@ import (
 	"github.com/PastureStack/node-agent/service/hostapi/proxy"
 	"github.com/PastureStack/node-agent/service/hostapi/stats"
 	"github.com/PastureStack/node-agent/service/hostapi/util"
+	"github.com/PastureStack/websocket-proxy/backend"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	rclient "github.com/rancher/go-rancher/client"
 	"github.com/rancher/log"
-	"github.com/rancher/websocket-proxy/backend"
 )
 
 func StartUp() {

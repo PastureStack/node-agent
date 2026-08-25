@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rancher/websocket-proxy/common"
+	"github.com/PastureStack/websocket-proxy/common"
 
 	. "gopkg.in/check.v1"
 )

@@ -5,11 +5,11 @@ package utils
 
 import (
 	"bufio"
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/utilities/docker"
-	"github.com/docker/docker/api/types"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 	"regexp"
 	"strings"
 	"time"

@@ -1,10 +1,10 @@
 package events
 
 import (
-	"github.com/docker/distribution/context"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/client"
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
+	"github.com/moby/moby/api/types/events"
 	"strconv"
 	"testing"
 	"time"

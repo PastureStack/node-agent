@@ -12,7 +12,7 @@ import (
 
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/constants"
-	goUUID "github.com/nu7hatch/gouuid"
+	googleUUID "github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/rancher/log"
 )
@@ -278,7 +278,7 @@ func getUUIDFromFile(uuidFilePath string) (string, error) {
 		return "", errors.Wrap(err, constants.ReadUUIDFromFileError+"failed to read uuid file")
 	}
 	if uuid == "" {
-		newUUID, err := goUUID.NewV4()
+		newUUID, err := googleUUID.NewRandom()
 		if err != nil {
 			return "", errors.Wrap(err, constants.ReadUUIDFromFileError+"failed to generate uuid")
 		}

@@ -1,13 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/api/types"
-	con "github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"golang.org/x/net/context"
+	con "github.com/moby/moby/api/types/container"
 	"gopkg.in/check.v1"
 )
 
@@ -64,13 +64,13 @@ func (s *ComputeTestSuite) TestConflictVolumeRemove(c *check.C) {
 	reply = testEvent(rawEvent3, c)
 	c.Assert(reply.Transitioning, check.Not(check.Equals), "error")
 	// check if the volume still exists because of our flaky logic
-	filter := filters.NewArgs()
-	list, err := dockerClient.VolumeList(context.Background(), filter)
+	filter := make(client.Filters)
+	list, err := dockerClient.VolumeList(context.Background(), client.VolumeListOptions{Filters: filter})
 	if err != nil {
 		c.Fatal(err)
 	}
 	found := false
-	for _, vo := range list.Volumes {
+	for _, vo := range list.Items {
 		if vo.Name == volumeName {
 			found = true
 		}

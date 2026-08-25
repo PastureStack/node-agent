@@ -2,14 +2,12 @@ package docker
 
 import (
 	"fmt"
-	"github.com/PastureStack/node-agent/utilities/constants"
-	dockerClient "github.com/docker/docker/client"
-	"github.com/docker/go-connections/tlsconfig"
-	"github.com/pkg/errors"
-	"net/http"
 	"os"
-	"path/filepath"
 	"time"
+
+	dockerClient "github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/utilities/constants"
+	"github.com/pkg/errors"
 )
 
 const DefaultVersion = ""
@@ -17,14 +15,9 @@ const DefaultVersion = ""
 func launchDefaultClient(version string) (*dockerClient.Client, error) {
 	ip := fmt.Sprintf("tcp://%v:2375", os.Getenv("DEFAULT_GATEWAY"))
 	if os.Getenv("DEFAULT_GATEWAY") == "" {
-		client, err := dockerClient.NewEnvClient()
-		if err != nil {
-			return nil, err
-		}
-		client.UpdateClientVersion(DefaultVersion)
-		return client, nil
+		return dockerClient.New(dockerClient.FromEnv)
 	}
-	cliFromAgent, cerr := dockerClient.NewClient(ip, version, nil, nil)
+	cliFromAgent, cerr := dockerClient.New(dockerClient.WithHost(ip), dockerClient.WithAPIVersion(version))
 	if cerr != nil {
 		return nil, errors.Wrap(cerr, constants.LaunchDefaultClientError)
 	}
@@ -32,36 +25,11 @@ func launchDefaultClient(version string) (*dockerClient.Client, error) {
 }
 
 func NewEnvClientWithTimeout(timeout time.Duration) (*dockerClient.Client, error) {
-	var client *http.Client
-	if dockerCertPath := os.Getenv("DOCKER_CERT_PATH"); dockerCertPath != "" {
-		options := tlsconfig.Options{
-			CAFile:             filepath.Join(dockerCertPath, "ca.pem"),
-			CertFile:           filepath.Join(dockerCertPath, "cert.pem"),
-			KeyFile:            filepath.Join(dockerCertPath, "key.pem"),
-			InsecureSkipVerify: os.Getenv("DOCKER_TLS_VERIFY") == "",
-		}
-		tlsc, err := tlsconfig.Client(options)
-		if err != nil {
-			return nil, err
-		}
-
-		client = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsc,
-			},
-			Timeout: timeout,
-		}
+	if gateway := os.Getenv("DEFAULT_GATEWAY"); gateway != "" {
+		return dockerClient.New(
+			dockerClient.WithHost(fmt.Sprintf("tcp://%v:2375", gateway)),
+			dockerClient.WithTimeout(timeout),
+		)
 	}
-
-	host := fmt.Sprintf("tcp://%v:2375", os.Getenv("DEFAULT_GATEWAY"))
-	if os.Getenv("DEFAULT_GATEWAY") == "" {
-		host = dockerClient.DefaultDockerHost
-	}
-
-	version := os.Getenv("DOCKER_API_VERSION")
-	if version == "" {
-		version = DefaultVersion
-	}
-
-	return dockerClient.NewClient(host, version, client, nil)
+	return dockerClient.New(dockerClient.FromEnv, dockerClient.WithTimeout(timeout))
 }

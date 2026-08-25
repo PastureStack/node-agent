@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/context"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/client"
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
+	"github.com/moby/moby/api/types/events"
 	rclient "github.com/rancher/go-rancher/client"
 	"github.com/rancher/log"
 )
@@ -80,10 +80,10 @@ func TestProcessDockerEvents(t *testing.T) {
 	for waitingOnRunning || waitingOnPaused {
 		select {
 		case e := <-handledEvents:
-			if e.ID == preexistRunning.ID {
+			if e.Actor.ID == preexistRunning.ID {
 				waitingOnRunning = false
 			}
-			if e.ID == preexistPaused.ID {
+			if e.Actor.ID == preexistPaused.ID {
 				waitingOnPaused = false
 			}
 		case <-time.After(10 * time.Second):

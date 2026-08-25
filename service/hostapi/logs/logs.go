@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"strings"
 
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/service/hostapi/auth"
 	"github.com/PastureStack/node-agent/service/hostapi/events"
-	"github.com/docker/docker/api/types"
+	"github.com/PastureStack/websocket-proxy/backend"
+	"github.com/PastureStack/websocket-proxy/common"
 	"github.com/rancher/log"
-	"github.com/rancher/websocket-proxy/backend"
-	"github.com/rancher/websocket-proxy/common"
-	"golang.org/x/net/context"
 )
 
 var (
@@ -55,6 +55,7 @@ func (l *Handler) Handle(key string, initialMessage string, incomingMessages <-c
 	}
 
 	ctx, cancelFnc := context.WithCancel(context.Background())
+	defer cancelFnc()
 	stdout, err := client.ContainerLogs(ctx, container, logOpts)
 	if err != nil {
 		log.Errorf("error fetching container logs: %v", err)

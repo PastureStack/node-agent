@@ -13,7 +13,7 @@ type SigningMethodRSAPSS struct {
 	// VerifyOptions is optional. If set overrides Options for rsa.VerifyPPS.
 	// Used to accept tokens signed with rsa.PSSSaltLengthAuto, what doesn't follow
 	// https://tools.ietf.org/html/rfc7518#section-3.5 but was used previously.
-	// Preserve the legacy non-null salt-length behavior for old RSASSA-PSS JWTs.
+	// See https://github.com/dgrijalva/jwt-go/issues/285#issuecomment-437451244 for details.
 	VerifyOptions *rsa.PSSOptions
 }
 

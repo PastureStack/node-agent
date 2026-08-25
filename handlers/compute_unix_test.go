@@ -10,14 +10,14 @@ import (
 	"strings"
 	"time"
 
+	"context"
+	"github.com/PastureStack/node-agent/internal/dockerapi/types"
 	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/PastureStack/node-agent/utilities/docker"
 	"github.com/PastureStack/node-agent/utilities/utils"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-units"
-	"golang.org/x/net/context"
+	"github.com/moby/moby/api/types/container"
 	"gopkg.in/check.v1"
 )
 
@@ -114,9 +114,8 @@ func (s *ComputeTestSuite) TestNewFields(c *check.C) {
 	c.Assert(inspect.HostConfig.CPUPeriod, check.Equals, int64(100000))
 	c.Assert(inspect.HostConfig.CPUQuota, check.Equals, int64(50000))
 	c.Assert(inspect.HostConfig.CpusetMems, check.Equals, "0")
-	if inspect.HostConfig.KernelMemory != 0 {
-		c.Assert(inspect.HostConfig.KernelMemory, check.Equals, int64(10000000))
-	}
+	// Separate kernel-memory limits were removed from current Moby/cgroup v2;
+	// the legacy input is accepted as an explicit no-op by node-agent.
 	c.Assert(inspect.HostConfig.Memory, check.Equals, int64(10000000))
 	if inspect.HostConfig.MemorySwappiness != nil {
 		c.Assert(*(inspect.HostConfig.MemorySwappiness), check.Equals, int64(50))

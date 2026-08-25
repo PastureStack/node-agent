@@ -1,17 +1,19 @@
 package aws
 
 import (
+	"context"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 
 	"github.com/PastureStack/node-agent/cloudprovider"
 	"github.com/PastureStack/node-agent/core/hostinfo"
 )
 
 const (
-	awsTag = "aws"
+	awsTag          = "aws"
+	metadataTimeout = 5 * time.Second
 )
 
 type Provider struct {
@@ -21,11 +23,16 @@ type Provider struct {
 }
 
 type metadataClient interface {
-	getInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
+	getInstanceIdentityDocument(context.Context) (instanceIdentity, error)
 }
 
 type metadataClientImpl struct {
-	client *ec2metadata.EC2Metadata
+	client *imds.Client
+}
+
+type instanceIdentity struct {
+	Region           string
+	AvailabilityZone string
 }
 
 func init() {
@@ -35,17 +42,21 @@ func init() {
 	})
 }
 
-func (m metadataClientImpl) getInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error) {
-	return m.client.GetInstanceIdentityDocument()
+func (m metadataClientImpl) getInstanceIdentityDocument(ctx context.Context) (instanceIdentity, error) {
+	document, err := m.client.GetInstanceIdentityDocument(ctx, nil)
+	if err != nil {
+		return instanceIdentity{}, err
+	}
+	return instanceIdentity{
+		Region:           document.Region,
+		AvailabilityZone: document.AvailabilityZone,
+	}, nil
 }
 
 func (p *Provider) Init() error {
-	s, err := session.NewSession()
-	if err != nil {
-		return err
-	}
-	client := metadataClientImpl{ec2metadata.New(s)}
-	p.client = client
+	p.client = metadataClientImpl{client: imds.New(imds.Options{
+		EnableFallback: awsv2.FalseTernary,
+	})}
 	return nil
 }
 
@@ -54,7 +65,10 @@ func (p *Provider) Name() string {
 }
 
 func (p *Provider) GetHostInfo() (i *hostinfo.Info, err error) {
-	document, err := p.client.getInstanceIdentityDocument()
+	ctx, cancel := context.WithTimeout(context.Background(), metadataTimeout)
+	defer cancel()
+
+	document, err := p.client.getInstanceIdentityDocument(ctx)
 	if err != nil {
 		return
 	}

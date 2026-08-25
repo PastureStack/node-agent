@@ -4,7 +4,7 @@
 package events
 
 import (
-	"github.com/docker/docker/client"
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
 )
 
 const (

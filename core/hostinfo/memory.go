@@ -3,7 +3,7 @@ package hostinfo
 import (
 	"github.com/PastureStack/node-agent/utilities/constants"
 	"github.com/pkg/errors"
-	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 type MemoryCollector struct {

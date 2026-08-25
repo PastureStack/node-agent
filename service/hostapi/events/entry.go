@@ -1,13 +1,12 @@
 package events
 
 import (
+	"context"
+
+	"github.com/PastureStack/node-agent/internal/dockerapi/client"
 	"github.com/PastureStack/node-agent/service/hostapi/config"
 	"github.com/PastureStack/node-agent/service/hostapi/util"
-	"github.com/docker/distribution/context"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/events"
 	rclient "github.com/rancher/go-rancher/client"
 )
 
@@ -53,12 +52,12 @@ func (de *DockerEventsProcessor) Process() error {
 	}
 	router.Start()
 
-	filter := filters.NewArgs()
+	filter := make(client.Filters)
 	filter.Add("status", "paused")
 	filter.Add("status", "running")
-	listOpts := types.ContainerListOptions{
-		All:    true,
-		Filter: filter,
+	listOpts := client.ContainerListOptions{
+		All:     true,
+		Filters: filter,
 	}
 	containers, err := dockerClient.ContainerList(context.Background(), listOpts)
 	if err != nil {
@@ -67,9 +66,12 @@ func (de *DockerEventsProcessor) Process() error {
 
 	for _, c := range containers {
 		event := &events.Message{
-			ID:     c.ID,
-			Status: "start",
-			From:   simulatedEvent,
+			Type:   events.ContainerEventType,
+			Action: events.Action("start"),
+			Actor: events.Actor{
+				ID:         c.ID,
+				Attributes: map[string]string{"image": simulatedEvent},
+			},
 		}
 		router.listener <- event
 	}
