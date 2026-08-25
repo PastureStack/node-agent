@@ -6,8 +6,8 @@ toolchain go1.27.0
 
 require (
 	github.com/PastureStack/websocket-proxy v0.0.0-00010101000000-000000000000
-	github.com/aws/aws-sdk-go-v2 v1.43.7
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.38
+	github.com/aws/aws-sdk-go-v2 v1.43.8
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.39
 	github.com/containerd/errdefs v1.0.0
 	github.com/docker/go-connections v0.8.1
 	github.com/docker/go-units v0.5.0
@@ -25,7 +25,7 @@ require (
 	github.com/rancher/go-rancher v0.1.1-0.20161130212115-f4560b58215d
 	github.com/rancher/log v0.1.0-u2
 	github.com/shirou/gopsutil/v4 v4.26.7
-	github.com/sirupsen/logrus v1.10.1
+	github.com/sirupsen/logrus v1.10.2
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
 	golang.org/x/sys v0.47.0
@@ -34,7 +34,7 @@ require (
 
 require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/aws/smithy-go v1.27.8 // indirect
+	github.com/aws/smithy-go v1.27.10 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect

@@ -19,7 +19,7 @@ github.com/PastureStack/websocket-proxy/proxy/apiinterceptor/model
 github.com/PastureStack/websocket-proxy/proxy/proxyprotocol
 github.com/PastureStack/websocket-proxy/proxy/tls
 github.com/PastureStack/websocket-proxy/testutils
-# github.com/aws/aws-sdk-go-v2 v1.43.7
+# github.com/aws/aws-sdk-go-v2 v1.43.8
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/aws
 github.com/aws/aws-sdk-go-v2/aws/middleware
@@ -31,11 +31,11 @@ github.com/aws/aws-sdk-go-v2/internal/rand
 github.com/aws/aws-sdk-go-v2/internal/sdk
 github.com/aws/aws-sdk-go-v2/internal/sync/singleflight
 github.com/aws/aws-sdk-go-v2/internal/timeconv
-# github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.38
+# github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.39
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds/internal/config
-# github.com/aws/smithy-go v1.27.8
+# github.com/aws/smithy-go v1.27.10
 ## explicit; go 1.24
 github.com/aws/smithy-go
 github.com/aws/smithy-go/auth
@@ -198,7 +198,7 @@ github.com/shirou/gopsutil/v4/internal/common
 github.com/shirou/gopsutil/v4/load
 github.com/shirou/gopsutil/v4/mem
 github.com/shirou/gopsutil/v4/net
-# github.com/sirupsen/logrus v1.10.1
+# github.com/sirupsen/logrus v1.10.2
 ## explicit; go 1.23
 github.com/sirupsen/logrus
 # github.com/tklauser/go-sysconf v0.3.16
