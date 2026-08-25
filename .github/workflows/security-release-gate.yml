@@ -34,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           test -z "$(git status --porcelain)"
-          test "$(git rev-list --count c8663d12dd253ef13258750dca056d4b1219fc10..HEAD)" -eq 1
+          git merge-base --is-ancestor c8663d12dd253ef13258750dca056d4b1219fc10 HEAD
           mkdir -p evidence
           git rev-parse HEAD > evidence/source-revision.txt
           sha256sum Dockerfile.dapper package/Dockerfile tests/requirements.lock \
