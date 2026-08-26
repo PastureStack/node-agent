@@ -27,8 +27,7 @@ class ApiProxy(object):
         to_host_ip = socket.gethostbyname(parsed.hostname)
         to_port = get_url_port(url)
 
-        log.info('Proxying %s:%s -> %s:%s', from_host, from_port, to_host_ip,
-                 to_port)
+        log.info('Starting local API proxy')
         listen = 'TCP4-LISTEN:{0},fork,bind={1},reuseaddr'.format(from_port,
                                                                   from_host)
         to = 'TCP:{0}:{1}'.format(to_host_ip, to_port)
