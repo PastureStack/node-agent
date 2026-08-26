@@ -1,8 +1,10 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -22,52 +24,57 @@ func SetOutput(out io.Writer) {
 
 // Info is wrapper for logrus.Info to print to stdout
 func Info(args ...interface{}) {
-	stdoutLogger.Info(args...)
+	stdoutLogger.Info(safeMessage(fmt.Sprint(args...)))
 }
 
 // Debug is wrapper for logrus.Debug to print to stdout
 func Debug(args ...interface{}) {
-	stdoutLogger.Debug(args...)
+	stdoutLogger.Debug(safeMessage(fmt.Sprint(args...)))
 }
 
 // Error is wrapper for logrus.Error to print to stderr
 func Error(args ...interface{}) {
-	stderrLogger.Error(args...)
+	stderrLogger.Error(safeMessage(fmt.Sprint(args...)))
 }
 
 // Fatal is wrapper for logrus.Fatal to print to stderr
 func Fatal(args ...interface{}) {
-	stderrLogger.Fatal(args...)
+	stderrLogger.Fatal(safeMessage(fmt.Sprint(args...)))
 }
 
 // Warn is wrapper for logrus.Warn to print to stderr
 func Warn(args ...interface{}) {
-	stderrLogger.Warn(args...)
+	stderrLogger.Warn(safeMessage(fmt.Sprint(args...)))
 }
 
 // Infof is wrapper for logrus.Infof to print to stdout
 func Infof(format string, args ...interface{}) {
-	stdoutLogger.Infof(format, args...)
+	stdoutLogger.Info(safeMessage(fmt.Sprintf(format, args...)))
 }
 
 // Debugf is wrapper for logrus.Debugf to print to stdout
 func Debugf(format string, args ...interface{}) {
-	stdoutLogger.Debugf(format, args...)
+	stdoutLogger.Debug(safeMessage(fmt.Sprintf(format, args...)))
 }
 
 // Errorf is wrapper for logrus.Errorf to print to stderr
 func Errorf(format string, args ...interface{}) {
-	stderrLogger.Errorf(format, args...)
+	stderrLogger.Error(safeMessage(fmt.Sprintf(format, args...)))
 }
 
 // Fatalf is wrapper for logrus.Fatalf to print to stderr
 func Fatalf(format string, args ...interface{}) {
-	stderrLogger.Fatalf(format, args...)
+	stderrLogger.Fatal(safeMessage(fmt.Sprintf(format, args...)))
 }
 
 // Warnf is wrapper for logrus.Warnf to print to stderr
 func Warnf(format string, args ...interface{}) {
-	stderrLogger.Warnf(format, args...)
+	stderrLogger.Warn(safeMessage(fmt.Sprintf(format, args...)))
+}
+
+func safeMessage(message string) string {
+	message = strings.ReplaceAll(message, "\r", "")
+	return strings.ReplaceAll(message, "\n", " ")
 }
 
 // ParseLevel takes a string level and returns the Logrus log level constant.

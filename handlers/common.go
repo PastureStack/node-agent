@@ -90,7 +90,7 @@ func reply(replyData map[string]interface{}, event *revents.Event, cli *client.R
 	if reply.ResourceType != "agent" {
 		log.Infof("Reply: %v, %v, %v:%v", event.ID, event.Name, reply.ResourceId, reply.ResourceType)
 	}
-	log.Debugf("Reply: %+v", reply)
+	log.Debugf("Reply queued with %d data fields", len(reply.Data))
 
 	err = publishReply(reply, cli)
 	if err != nil {

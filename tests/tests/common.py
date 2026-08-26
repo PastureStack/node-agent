@@ -243,7 +243,7 @@ def docker_client(version=None, base_url_override=None, tls_config=None,
     if timeout:
         kwargs['timeout'] = timeout
     kwargs['version'] = version
-    log.debug('docker_client=%s', kwargs)
+    log.debug('docker client options configured')
     return Client(**kwargs)
 
 
