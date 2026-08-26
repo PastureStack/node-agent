@@ -60,7 +60,7 @@ func StartUp() {
 	for {
 		platformClient, err := util.GetPlatformClient()
 		if err != nil {
-			log.Errorf("Failed to get platform client for host-api startup: %v", err)
+			log.Error("Failed to get platform client for host-api startup")
 			time.Sleep(time.Duration(5) * time.Second)
 			continue
 		}
@@ -123,7 +123,7 @@ func getConnectionToken(try int, tokenReq *rclient.HostApiProxyToken, platformCl
 					}
 				}
 				if strings.EqualFold(m["code"], "InvalidReference") && strings.EqualFold(m["fieldName"], "reportedUuid") {
-					log.Infof("Host not registered yet. Sleeping 1 second and trying again. reportedUuid=%v Attempt=%v", config.Config.HostUUID, try)
+					log.Infof("Host not registered yet. Sleeping 1 second and trying again. Attempt=%v", try)
 					time.Sleep(time.Second)
 					try++
 					return getConnectionToken(try, tokenReq, platformClient) // Recursion!

@@ -14,7 +14,7 @@ import (
 )
 
 func Listen(eventURL, accessKey, secretKey string, workerCount int) error {
-	log.Infof("Listening for events on %v", eventURL)
+	log.Info("Listening for events")
 
 	config.SetAccessKey(accessKey)
 	config.SetSecretKey(secretKey)
