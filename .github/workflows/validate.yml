@@ -34,12 +34,12 @@ jobs:
         id: package
         env:
           CROSS: "1"
-          VERSION_OVERRIDE: v0.13.23
+          VERSION_OVERRIDE: v0.13.24
         run: |
           set -euo pipefail
           make ci
-          linux_asset="dist/artifacts/node-agent-0.13.23.tar.gz"
-          windows_asset="dist/artifacts/node-agent-0.13.23-windows-amd64.zip"
+          linux_asset="dist/artifacts/node-agent-0.13.24.tar.gz"
+          windows_asset="dist/artifacts/node-agent-0.13.24-windows-amd64.zip"
           test -s "$linux_asset"
           test -s "$windows_asset"
           gzip -t "$linux_asset"
@@ -47,8 +47,8 @@ jobs:
           (
             cd dist/artifacts
             sha256sum \
-              node-agent-0.13.23.tar.gz \
-              node-agent-0.13.23-windows-amd64.zip >SHA256SUMS
+              node-agent-0.13.24.tar.gz \
+              node-agent-0.13.24-windows-amd64.zip >SHA256SUMS
           )
           printf 'NODE_AGENT_VALIDATION_OK source=%s version=%s artifacts=linux,windows\n' \
             "$GITHUB_SHA" "$VERSION_OVERRIDE"
@@ -56,10 +56,10 @@ jobs:
       - name: Retain reviewed release candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: node-agent-0.13.23
+          name: node-agent-0.13.24
           path: |
-            dist/artifacts/node-agent-0.13.23.tar.gz
-            dist/artifacts/node-agent-0.13.23-windows-amd64.zip
+            dist/artifacts/node-agent-0.13.24.tar.gz
+            dist/artifacts/node-agent-0.13.24-windows-amd64.zip
             dist/artifacts/SHA256SUMS
           if-no-files-found: error
           retention-days: 30

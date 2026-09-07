@@ -65,6 +65,10 @@ type LaunchConfig struct {
 
 	Devices []string `json:"devices,omitempty" yaml:"devices,omitempty"`
 
+	Runtime string `json:"runtime,omitempty" yaml:"runtime,omitempty"`
+
+	DeviceRequests []DeviceRequest `json:"deviceRequests,omitempty" yaml:"device_requests,omitempty"`
+
 	DiskQuota int64 `json:"diskQuota,omitempty" yaml:"disk_quota,omitempty"`
 
 	Disks []VirtualMachineDisk `json:"disks,omitempty" yaml:"disks,omitempty"`

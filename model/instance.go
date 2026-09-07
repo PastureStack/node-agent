@@ -172,6 +172,7 @@ type Resources struct {
 	CpusetCpus           string                    // CpusetCpus 0-2, 0,1
 	CpusetMems           string                    // CpusetMems 0-2, 0,1
 	Devices              []container.DeviceMapping // List of devices to map inside the container
+	DeviceRequests       []container.DeviceRequest // Preserve GPU identities in Docker inspect round trips
 	DiskQuota            int64                     // Disk limit (in bytes)
 	KernelMemory         int64                     // Kernel memory limit (in bytes)
 	MemoryReservation    int64                     // Memory soft limit (in bytes)
@@ -201,8 +202,10 @@ type InstanceFields struct {
 	LogConfig          LogConfig
 	SecurityOpt        []string
 	Devices            []string
-	DNS                []string `json:"dns"`
-	DNSSearch          []string `json:"dnsSearch"`
+	Runtime            string          `json:"runtime"`
+	DeviceRequests     []DeviceRequest `json:"deviceRequests"`
+	DNS                []string        `json:"dns"`
+	DNSSearch          []string        `json:"dnsSearch"`
 	CapAdd             []string
 	CapDrop            []string
 	RestartPolicy      container.RestartPolicy
@@ -262,6 +265,16 @@ type InstanceFields struct {
 type LogConfig struct {
 	Driver string
 	Config map[string]string
+}
+
+// DeviceRequest uses the LaunchConfig API spelling, independently of Docker's
+// capitalized wire format. Count and DeviceIDs are mutually exclusive.
+type DeviceRequest struct {
+	Driver       string            `json:"driver,omitempty"`
+	Count        int               `json:"count,omitempty"`
+	DeviceIDs    []string          `json:"deviceIds,omitempty"`
+	Capabilities [][]string        `json:"capabilities"`
+	Options      map[string]string `json:"options,omitempty"`
 }
 
 type DeviceOptions struct {
