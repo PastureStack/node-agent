@@ -88,7 +88,9 @@ func (s *ComputeTestSuite) TestNewFields(c *check.C) {
 	fields["shmSize"] = 67108864
 	fields["groupAdd"] = []string{"root"}
 	fields["uts"] = "host"
-	fields["ipcMode"] = "host"
+	// A dedicated shared-memory limit requires a private IPC namespace.
+	// Host IPC is covered separately without a contradictory shmSize.
+	fields["ipcMode"] = "private"
 	fields["stopSignal"] = "SIGTERM"
 	fields["ulimits"] = []map[string]interface{}{
 		{
@@ -127,7 +129,7 @@ func (s *ComputeTestSuite) TestNewFields(c *check.C) {
 	c.Assert(inspect.HostConfig.ShmSize, check.Equals, int64(67108864))
 	c.Assert(inspect.HostConfig.GroupAdd, check.DeepEquals, []string{"root"})
 	c.Assert(string(inspect.HostConfig.UTSMode), check.Equals, "host")
-	c.Assert(string(inspect.HostConfig.IpcMode), check.Equals, "host")
+	c.Assert(string(inspect.HostConfig.IpcMode), check.Equals, "private")
 	c.Assert(inspect.Config.StopSignal, check.Equals, "SIGTERM")
 	ulimits := []units.Ulimit{
 		{
@@ -137,6 +139,19 @@ func (s *ComputeTestSuite) TestNewFields(c *check.C) {
 		},
 	}
 	c.Assert(*(inspect.HostConfig.Ulimits[0]), check.DeepEquals, ulimits[0])
+}
+
+func (s *ComputeTestSuite) TestHostIPCWithoutShmSize(c *check.C) {
+	deleteContainer("/c861f990-4472-4fa1-960f-65171b544c28")
+	event, _, fields := unmarshalEventAndInstanceFields(loadEvent("./test_events/instance_activate_basic", c), c)
+	fields["ipcMode"] = "host"
+	delete(fields, "shmSize")
+	reply := testEvent(marshalEvent(event, c), c)
+	created, ok := utils.GetFieldsIfExist(reply.Data, "instanceHostMap", "instance", "+data", "dockerContainer")
+	c.Assert(ok, check.Equals, true)
+	inspect, err := docker.GetClient(docker.DefaultVersion).ContainerInspect(context.Background(), created.(types.Container).ID)
+	c.Assert(err, check.IsNil)
+	c.Assert(string(inspect.HostConfig.IpcMode), check.Equals, "host")
 }
 
 func (s *ComputeTestSuite) TestDNSFields(c *check.C) {
