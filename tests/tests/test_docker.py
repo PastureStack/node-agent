@@ -1101,10 +1101,18 @@ def test_instance_activate_caps(agent):
         instance_activate_assert_host_config(resp)
         instance_data = resp['data']['instanceHostMap']['instance']['+data']
         docker_inspect = instance_data['dockerInspect']
-        set_actual_cap_add = set(docker_inspect['HostConfig']['CapAdd'])
+        # Docker 29 canonicalizes capability names with the CAP_ prefix.
+        # Compare the exact capability set, accepting either API spelling.
+        set_actual_cap_add = {
+            name.removeprefix('CAP_')
+            for name in docker_inspect['HostConfig']['CapAdd']
+        }
         set_expected_cap_add = set(["MKNOD", "SYS_ADMIN"])
         assert set_actual_cap_add == set_expected_cap_add
-        set_actual_cap_drop = set(docker_inspect['HostConfig']['CapDrop'])
+        set_actual_cap_drop = {
+            name.removeprefix('CAP_')
+            for name in docker_inspect['HostConfig']['CapDrop']
+        }
         set_expected_cap_drop = set(["MKNOD", "SYS_ADMIN"])
         assert set_actual_cap_drop == set_expected_cap_drop
         container_field_test_boiler_plate(resp)
