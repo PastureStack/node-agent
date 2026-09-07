@@ -445,7 +445,7 @@ func setupHardware(fields model.InstanceFields, hostConfig *container.HostConfig
 	for _, device := range fields.Devices {
 		parts := strings.Split(device, ":")
 		if len(parts) > 3 || !path.IsAbs(parts[0]) || path.Clean(parts[0]) != parts[0] {
-   return errors.New("devices requires an absolute host path, optionally :container-path[:rwm]; CDI identifiers are not supported")
+			return errors.New("devices requires an absolute host path, optionally :container-path[:rwm]; CDI identifiers are not supported")
 		}
 		target, permissions := parts[0], "rwm"
 		if len(parts) >= 2 {
