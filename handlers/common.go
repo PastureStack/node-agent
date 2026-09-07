@@ -135,6 +135,7 @@ func initializeHandlers() *Handler {
 	storageCache := cache.New(5*time.Minute, 30*time.Second)
 	cache := cache.New(5*time.Minute, 30*time.Second)
 	Collectors := []hostinfo.Collector{
+		hostinfo.HardwareCollector{DockerClient: clientWithTimeout},
 		hostinfo.CPUCollector{},
 		hostinfo.DiskCollector{
 			Unit: 1048576,

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/netip"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -310,23 +311,9 @@ func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.Ho
 
 	hostConfig.SecurityOpt = fields.SecurityOpt
 
-	deviceMappings := []container.DeviceMapping{}
-	devices := fields.Devices
-	for _, device := range devices {
-		parts := strings.Split(device, ":")
-		permission := "rwm"
-		if len(parts) == 3 {
-			permission = parts[2]
-		}
-		deviceMappings = append(deviceMappings,
-			container.DeviceMapping{
-				PathOnHost:        parts[0],
-				PathInContainer:   parts[1],
-				CgroupPermissions: permission,
-			})
+	if err := setupHardware(fields, hostConfig); err != nil {
+		return err
 	}
-
-	hostConfig.Devices = deviceMappings
 
 	hostConfig.DNS = make([]netip.Addr, 0, len(fields.DNS))
 	for _, value := range fields.DNS {
@@ -410,6 +397,81 @@ func setupFieldsHostConfig(fields model.InstanceFields, hostConfig *container.Ho
 
 	hostConfig.UsernsMode = fields.UsernsMode
 
+	return nil
+}
+
+func setupHardware(fields model.InstanceFields, hostConfig *container.HostConfig) error {
+	if fields.ShmSize < 0 {
+		return errors.New("shmSize must be non-negative bytes")
+	}
+	if fields.ShmSize > 0 && fields.IpcMode != "" && fields.IpcMode != "private" && fields.IpcMode != "shareable" {
+		return errors.New("shmSize requires private or shareable IPC")
+	}
+	if strings.Trim(fields.Runtime, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-") != "" {
+		return errors.New("runtime must be a registered runtime name")
+	}
+	hostConfig.Runtime = fields.Runtime
+	hostConfig.DeviceRequests = nil
+	for _, request := range fields.DeviceRequests {
+		if request.Count < -1 || (request.Count != 0 && len(request.DeviceIDs) > 0) || (request.Count == 0 && len(request.DeviceIDs) == 0) {
+			return errors.New("deviceRequests requires count (-1 for all or a positive integer) OR deviceIds")
+		}
+		if len(request.Capabilities) == 0 {
+			return errors.New("deviceRequests requires capabilities")
+		}
+		for _, capabilities := range request.Capabilities {
+			if len(capabilities) == 0 {
+				return errors.New("deviceRequests capability groups cannot be empty")
+			}
+			for _, capability := range capabilities {
+				if strings.TrimSpace(capability) == "" {
+					return errors.New("deviceRequests capabilities cannot be blank")
+				}
+			}
+		}
+		seen := map[string]bool{}
+		for _, id := range request.DeviceIDs {
+			if strings.TrimSpace(id) == "" || seen[id] {
+				return errors.New("deviceRequests deviceIds must be non-empty and unique")
+			}
+			seen[id] = true
+		}
+		hostConfig.DeviceRequests = append(hostConfig.DeviceRequests, container.DeviceRequest{
+			Driver: request.Driver, Count: request.Count, DeviceIDs: request.DeviceIDs,
+			Capabilities: request.Capabilities, Options: request.Options,
+		})
+	}
+	hostConfig.Devices = nil
+	for _, device := range fields.Devices {
+		parts := strings.Split(device, ":")
+		if len(parts) > 3 || !path.IsAbs(parts[0]) || path.Clean(parts[0]) != parts[0] {
+   return errors.New("devices requires an absolute host path, optionally :container-path[:rwm]; CDI identifiers are not supported")
+		}
+		target, permissions := parts[0], "rwm"
+		if len(parts) >= 2 {
+			if path.IsAbs(parts[1]) {
+				target = parts[1]
+			} else if len(parts) == 2 {
+				permissions = parts[1]
+			} else {
+				return errors.New("devices container path must be absolute")
+			}
+		}
+		if len(parts) == 3 {
+			permissions = parts[2]
+		}
+		if path.Clean(target) != target || permissions == "" || strings.Trim(permissions, "rwm") != "" {
+			return errors.New("invalid devices path or permissions")
+		}
+		for _, permission := range "rwm" {
+			if strings.Count(permissions, string(permission)) > 1 {
+				return errors.New("duplicate device permission")
+			}
+		}
+		hostConfig.Devices = append(hostConfig.Devices, container.DeviceMapping{
+			PathOnHost: parts[0], PathInContainer: target, CgroupPermissions: permissions,
+		})
+	}
 	return nil
 }
 
