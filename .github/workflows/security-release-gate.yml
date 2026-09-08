@@ -19,9 +19,9 @@ jobs:
     timeout-minutes: 120
     env:
       DAPPER_IMAGE: pasturestack/node-agent-dapper:${{ github.sha }}
-      RUNTIME_IMAGE: pasturestack/node-agent:v0.13.26
+      RUNTIME_IMAGE: pasturestack/node-agent:v0.13.27
       TRIVY_IMAGE: aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
-      VERSION_OVERRIDE: v0.13.26
+      VERSION_OVERRIDE: v0.13.27
     steps:
       - name: Check out candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -50,20 +50,20 @@ jobs:
           set -euo pipefail
           CROSS=1 VERSION_OVERRIDE="$VERSION_OVERRIDE" make DAPPER_IMAGE="$DAPPER_IMAGE" ci
           make DAPPER_IMAGE="$DAPPER_IMAGE" IMAGE_NAME=pasturestack/node-agent \
-            TAG=v0.13.26 VERSION_OVERRIDE="$VERSION_OVERRIDE" package-image
-          test -s dist/artifacts/node-agent-0.13.26.tar.gz
-          test -s dist/artifacts/node-agent-0.13.26-windows-amd64.zip
+            TAG=v0.13.27 VERSION_OVERRIDE="$VERSION_OVERRIDE" package-image
+          test -s dist/artifacts/node-agent-0.13.27.tar.gz
+          test -s dist/artifacts/node-agent-0.13.27-windows-amd64.zip
           test "$(cat dist/image)" = "$RUNTIME_IMAGE"
-          gzip -t dist/artifacts/node-agent-0.13.26.tar.gz
-          bash scripts/verify-package dist/artifacts/node-agent-0.13.26.tar.gz
-          unzip -t dist/artifacts/node-agent-0.13.26-windows-amd64.zip
-          sha256sum dist/artifacts/node-agent-0.13.26.tar.gz \
-            dist/artifacts/node-agent-0.13.26-windows-amd64.zip \
+          gzip -t dist/artifacts/node-agent-0.13.27.tar.gz
+          bash scripts/verify-package dist/artifacts/node-agent-0.13.27.tar.gz
+          unzip -t dist/artifacts/node-agent-0.13.27-windows-amd64.zip
+          sha256sum dist/artifacts/node-agent-0.13.27.tar.gz \
+            dist/artifacts/node-agent-0.13.27-windows-amd64.zip \
             bin/node-agent > evidence/product-artifacts.sha256
           docker image inspect "$RUNTIME_IMAGE" > evidence/runtime-image-inspect.json
           docker run --rm --entrypoint /usr/bin/node-agent "$RUNTIME_IMAGE" --version \
             > evidence/runtime-version.txt
-          grep -Fxq 'node-agent version v0.13.26' evidence/runtime-version.txt
+          grep -Fxq 'node-agent version v0.13.27' evidence/runtime-version.txt
 
       - name: Verify reproducible Linux binary
         shell: bash
