@@ -60,7 +60,7 @@ func (h *StorageHandler) ImageActivate(event *revents.Event, cli *client.Rancher
 
 func (h *StorageHandler) VolumeActivate(event *revents.Event, cli *client.RancherClient) error {
 	var volumeStoragePoolMap model.VolumeStoragePoolMap
-	err := mapstructure.Decode(event.Data["volumeStoragePoolMap"], &volumeStoragePoolMap)
+	err := utils.DecodeEventModel(event.Data["volumeStoragePoolMap"], &volumeStoragePoolMap)
 	if err != nil {
 		return errors.Wrap(err, constants.VolumeActivateError+"failed to marshall incoming request")
 	}
@@ -88,7 +88,7 @@ func (h *StorageHandler) VolumeActivate(event *revents.Event, cli *client.Ranche
 
 func (h *StorageHandler) VolumeRemove(event *revents.Event, cli *client.RancherClient) error {
 	var volumeStoragePoolMap model.VolumeStoragePoolMap
-	err := mapstructure.Decode(event.Data["volumeStoragePoolMap"], &volumeStoragePoolMap)
+	err := utils.DecodeEventModel(event.Data["volumeStoragePoolMap"], &volumeStoragePoolMap)
 	if err != nil {
 		return errors.Wrap(err, constants.VolumeRemoveError+"failed to marshall incoming request")
 	}

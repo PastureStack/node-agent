@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/PastureStack/node-agent/internal/dockerapi/types"
+	"github.com/PastureStack/node-agent/model"
 	"github.com/moby/moby/api/types/network"
 	revents "github.com/rancher/event-subscriber/events"
 )
@@ -52,26 +53,76 @@ func TestIsNodeAgentContainer(t *testing.T) {
 	}
 }
 
+func TestDecodeEventModelDecodesNestedVolumeDockerInspectTypes(t *testing.T) {
+	payload := map[string]interface{}{
+		"volume": map[string]interface{}{
+			"id": 23,
+			"instance": map[string]interface{}{
+				"data": map[string]interface{}{
+					"dockerInspect": map[string]interface{}{
+						"Config": map[string]interface{}{
+							"ExposedPorts": map[string]interface{}{"8090/tcp": ""},
+						},
+						"NetworkSettings": map[string]interface{}{
+							"Networks": map[string]interface{}{
+								"host": map[string]interface{}{
+									"Gateway":           "",
+									"IPAddress":         "",
+									"MacAddress":        "",
+									"IPv6Gateway":       "",
+									"GlobalIPv6Address": "",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	var decoded model.VolumeStoragePoolMap
+	if err := DecodeEventModel(payload, &decoded); err != nil {
+		t.Fatalf("DecodeEventModel() error = %v", err)
+	}
+	if decoded.Volume.ID != 23 {
+		t.Fatalf("decoded volume id = %d, want 23", decoded.Volume.ID)
+	}
+	if _, ok := decoded.Volume.Instance.Data.DockerInspect.Config.ExposedPorts[network.MustParsePort("8090/tcp")]; !ok {
+		t.Fatal("nested empty Docker port-set value was not decoded")
+	}
+	if endpoint := decoded.Volume.Instance.Data.DockerInspect.NetworkSettings.Networks["host"]; endpoint == nil {
+		t.Fatal("nested host endpoint was not decoded")
+	}
+}
+
 func TestGetInstanceAndHostDecodesCurrentDockerInspectTypes(t *testing.T) {
+	dockerInspect := map[string]interface{}{
+		"Config": map[string]interface{}{
+			"ExposedPorts": map[string]interface{}{"8080/tcp": ""},
+		},
+		"NetworkSettings": map[string]interface{}{
+			"Networks": map[string]interface{}{
+				"bridge": map[string]interface{}{
+					"Gateway":           "172.17.0.1",
+					"IPAddress":         "172.17.0.2",
+					"MacAddress":        "02:42:ac:11:00:02",
+					"IPv6Gateway":       "",
+					"GlobalIPv6Address": "",
+				},
+			},
+		},
+	}
 	event := &revents.Event{Data: map[string]interface{}{
 		"instanceHostMap": map[string]interface{}{
 			"instance": map[string]interface{}{
 				"id": 17,
 				"data": map[string]interface{}{
-					"dockerInspect": map[string]interface{}{
-						"Config": map[string]interface{}{
-							"ExposedPorts": map[string]interface{}{"8080/tcp": ""},
-						},
-						"NetworkSettings": map[string]interface{}{
-							"Networks": map[string]interface{}{
-								"bridge": map[string]interface{}{
-									"Gateway":           "172.17.0.1",
-									"IPAddress":         "172.17.0.2",
-									"MacAddress":        "02:42:ac:11:00:02",
-									"IPv6Gateway":       "",
-									"GlobalIPv6Address": "",
-								},
-							},
+					"dockerInspect": dockerInspect,
+				},
+				"volumes": []interface{}{
+					map[string]interface{}{
+						"instance": map[string]interface{}{
+							"data": map[string]interface{}{"dockerInspect": dockerInspect},
 						},
 					},
 				},
@@ -93,5 +144,9 @@ func TestGetInstanceAndHostDecodesCurrentDockerInspectTypes(t *testing.T) {
 	}
 	if _, ok := instance.Data.DockerInspect.Config.ExposedPorts[network.MustParsePort("8080/tcp")]; !ok {
 		t.Fatal("empty Docker port-set value was not decoded")
+	}
+	nested := instance.Volumes[0].Instance.Data.DockerInspect.NetworkSettings.Networks["bridge"]
+	if nested == nil || nested.IPAddress != netip.MustParseAddr("172.17.0.2") || nested.MacAddress.String() != "02:42:ac:11:00:02" {
+		t.Fatalf("decoded nested endpoint = %#v", nested)
 	}
 }
