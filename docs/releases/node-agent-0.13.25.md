@@ -6,6 +6,8 @@ PastureStack host installers.
 - Keep the legacy `SHA1SUMS` and `SHA1SUMSSUM` files for older hosts.
 - Add `SHA256SUMS` and `SHA256SUMSSUM` for current hosts.
 - Verify both checksum chains against the extracted release archive in CI.
+- Refresh the transparent build-only `linux-libc-dev` OpenVEX review for the
+  exact Ubuntu snapshot package used by the disposable Dapper image.
 
 Runtime hardware inventory and Docker request behavior are unchanged from
 v0.13.24.
