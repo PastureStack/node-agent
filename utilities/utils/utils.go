@@ -33,16 +33,16 @@ func GetInstanceAndHost(event *revents.Event) (model.Instance, model.Host, error
 
 	data := event.Data
 	var ihm model.InstanceHostMap
-	if err := decodeEventModel(data["instanceHostMap"], &ihm); err != nil {
+	if err := DecodeEventModel(data["instanceHostMap"], &ihm); err != nil {
 		return model.Instance{}, model.Host{}, errors.Wrap(err, constants.GetInstanceAndHostError+"failed to marshall instancehostmap")
 	}
 
 	var instance model.Instance
-	if err := decodeEventModel(ihm.Instance, &instance); err != nil {
+	if err := DecodeEventModel(ihm.Instance, &instance); err != nil {
 		return model.Instance{}, model.Host{}, errors.Wrap(err, constants.GetInstanceAndHostError+"failed to marshall instance data")
 	}
 	var host model.Host
-	if err := decodeEventModel(ihm.Host, &host); err != nil {
+	if err := DecodeEventModel(ihm.Host, &host); err != nil {
 		return model.Instance{}, model.Host{}, errors.Wrap(err, constants.GetInstanceAndHostError+"failed to marshall host data")
 	}
 
@@ -51,7 +51,9 @@ func GetInstanceAndHost(event *revents.Event) (model.Instance, model.Host, error
 
 var emptyStructType = reflect.TypeOf(struct{}{})
 
-func decodeEventModel(input interface{}, output interface{}) error {
+// DecodeEventModel applies the Docker API compatibility hooks required by
+// event payloads that can contain current Docker inspect values.
+func DecodeEventModel(input interface{}, output interface{}) error {
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		Result:           output,
 		TagName:          "json",
