@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+archive=${1:?Usage: scripts/verify-package ARCHIVE}
+test -s "$archive"
+gzip -t "$archive"
+
+workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT
+tar -xzf "$archive" -C "$workdir"
+
+mapfile -t roots < <(find "$workdir" -mindepth 1 -maxdepth 1 -type d -print)
+test "${#roots[@]}" -eq 1
+root=${roots[0]}
+test -z "$(find "$workdir" -mindepth 1 -maxdepth 1 ! -type d -print -quit)"
+test -f "$root/apply.sh"
+test -x "$root/bin/node-agent"
+
+(
+    cd "$workdir"
+    root_name=$(basename "$root")
+    sha1sum -c "$root_name/SHA1SUMSSUM"
+    sha1sum -c "$root_name/SHA1SUMS"
+    sha256sum -c "$root_name/SHA256SUMSSUM"
+    sha256sum -c "$root_name/SHA256SUMS"
+)
+
+printf 'NODE_AGENT_PACKAGE_OK archive=%s checksums=sha1,sha256\n' "$archive"
