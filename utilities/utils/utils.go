@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -32,20 +33,45 @@ func GetInstanceAndHost(event *revents.Event) (model.Instance, model.Host, error
 
 	data := event.Data
 	var ihm model.InstanceHostMap
-	if err := mapstructure.Decode(data["instanceHostMap"], &ihm); err != nil {
+	if err := decodeEventModel(data["instanceHostMap"], &ihm); err != nil {
 		return model.Instance{}, model.Host{}, errors.Wrap(err, constants.GetInstanceAndHostError+"failed to marshall instancehostmap")
 	}
 
 	var instance model.Instance
-	if err := mapstructure.Decode(ihm.Instance, &instance); err != nil {
+	if err := decodeEventModel(ihm.Instance, &instance); err != nil {
 		return model.Instance{}, model.Host{}, errors.Wrap(err, constants.GetInstanceAndHostError+"failed to marshall instance data")
 	}
 	var host model.Host
-	if err := mapstructure.Decode(ihm.Host, &host); err != nil {
+	if err := decodeEventModel(ihm.Host, &host); err != nil {
 		return model.Instance{}, model.Host{}, errors.Wrap(err, constants.GetInstanceAndHostError+"failed to marshall host data")
 	}
 
 	return instance, host, nil
+}
+
+var emptyStructType = reflect.TypeOf(struct{}{})
+
+func decodeEventModel(input interface{}, output interface{}) error {
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		Result:           output,
+		TagName:          "json",
+		WeaklyTypedInput: true,
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			func(from reflect.Type, to reflect.Type, value interface{}) (interface{}, error) {
+				if to == emptyStructType {
+					if text, ok := value.(string); ok && text == "" {
+						return struct{}{}, nil
+					}
+				}
+				return value, nil
+			},
+			mapstructure.TextUnmarshallerHookFunc(),
+		),
+	})
+	if err != nil {
+		return err
+	}
+	return decoder.Decode(input)
 }
 
 func IsNoOp(data model.ProcessData) bool {
