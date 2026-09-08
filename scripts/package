@@ -35,9 +35,16 @@ cp -rf bin/node-agent build/${CONTENT}/bin
 
 pushd build >/dev/null
 
-find "${CONTENT}" -type f ! -name SHA1SUMS ! -name SHA1SUMSSUM -print0 | sort -z | \
-    xargs -0 sha1sum -b > "${CONTENT}/SHA1SUMS"
+find "${CONTENT}" -type f \
+    ! -name SHA1SUMS ! -name SHA1SUMSSUM \
+    ! -name SHA256SUMS ! -name SHA256SUMSSUM \
+    -print0 | sort -z | xargs -0 sha1sum -b > "${CONTENT}/SHA1SUMS"
 sha1sum "${CONTENT}/SHA1SUMS" > "${CONTENT}/SHA1SUMSSUM"
+find "${CONTENT}" -type f \
+    ! -name SHA1SUMS ! -name SHA1SUMSSUM \
+    ! -name SHA256SUMS ! -name SHA256SUMSSUM \
+    -print0 | sort -z | xargs -0 sha256sum -b > "${CONTENT}/SHA256SUMS"
+sha256sum "${CONTENT}/SHA256SUMS" > "${CONTENT}/SHA256SUMSSUM"
 
 archive_tmp=$(mktemp "../dist/artifacts/.node-agent-${RELEASE_VERSION}.tar.gz.XXXXXX")
 trap 'rm -f "$archive_tmp"' EXIT
