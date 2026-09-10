@@ -8,7 +8,7 @@ PastureStack is an independent community effort to preserve, audit, and moderniz
 
 ## Project status
 
-This is a migration proof of concept. The existing Ubuntu 26.04, Go 1.27.0, modern Docker test harness, runtime hardening, and dependency maintenance are retained. Product-owned import paths, binaries, archives, images, Windows service names, and operator messages use PastureStack naming. Python test dependencies are fully pinned and cached in the disposable build image so clean-checkout tests do not depend on live PyPI availability. Release packaging is manual; no CI/CD or automatic production deployment is enabled.
+This is a migration proof of concept. The existing Ubuntu 26.04, Go 1.27.0, modern Docker test harness, runtime hardening, and dependency maintenance are retained. Product-owned import paths, binaries, archives, images, Windows service names, and operator messages use PastureStack naming. Python test dependencies are fully pinned and cached in the disposable build image so clean-checkout tests do not depend on live PyPI availability. GitHub Actions runs repository validation and security checks. Release packaging remains manual, and no automatic production deployment is enabled.
 
 ## Configuration
 
