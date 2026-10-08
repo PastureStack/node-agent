@@ -29,6 +29,10 @@ mkdir -p dist/artifacts
 if [ ! -e bin/node-agent ]; then
     ./scripts/build
 fi
+test "$(bin/node-agent --version)" = "node-agent version v${RELEASE_VERSION}" || {
+    echo "node-agent binary version does not match package version; rebuild source" >&2
+    exit 1
+}
 
 cp -rf apply.sh build/${CONTENT}
 cp -rf bin/node-agent build/${CONTENT}/bin

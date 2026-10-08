@@ -1,12 +1,12 @@
 package events
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/PastureStack/node-agent/handlers"
-	"github.com/PastureStack/node-agent/service/hostapi"
 	"github.com/PastureStack/node-agent/utilities/config"
 	"github.com/pkg/errors"
 	revents "github.com/rancher/event-subscriber/events"
@@ -23,8 +23,9 @@ func Listen(eventURL, accessKey, secretKey string, workerCount int) error {
 	config.PhysicalHostUUID(true)
 	config.SetDockerUUID()
 
-	log.Info("launching hostapi")
-	go hostapi.StartUp()
+	hostContext, stopHostAPI := context.WithCancel(context.Background())
+	defer stopHostAPI()
+	go startHostAPI(hostContext)
 
 	go func() {
 		timestamps := time.Time{}

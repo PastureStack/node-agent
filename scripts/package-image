@@ -8,6 +8,10 @@ cd "$(dirname "$0")/.."
 if [ ! -e bin/node-agent ]; then
     ./scripts/build
 fi
+test "$(bin/node-agent --version)" = "node-agent version v${VERSION#v}" || {
+    echo "node-agent binary version does not match image version; rebuild source" >&2
+    exit 1
+}
 
 image_name="${IMAGE_NAME:-pasturestack/node-agent}"
 tag="${TAG:-${VERSION}}"
