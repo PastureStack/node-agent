@@ -2,7 +2,7 @@ module github.com/PastureStack/node-agent
 
 go 1.26.0
 
-toolchain go1.27.0
+toolchain go1.27.2
 
 require (
 	github.com/PastureStack/websocket-proxy v0.0.0-00010101000000-000000000000
