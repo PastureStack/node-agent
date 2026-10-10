@@ -8,7 +8,7 @@ PastureStack is an independent community effort to preserve, audit, and moderniz
 
 ## Project status
 
-This is a migration proof of concept. The existing Ubuntu 26.04, Go 1.27.0, modern Docker test harness, runtime hardening, and dependency maintenance are retained. Product-owned import paths, binaries, archives, images, Windows service names, and operator messages use PastureStack naming. Python test dependencies are fully pinned and cached in the disposable build image so clean-checkout tests do not depend on live PyPI availability. GitHub Actions runs repository validation and security checks. Release packaging remains manual, and no automatic production deployment is enabled.
+This is a migration proof of concept. The existing Ubuntu 26.04, Go 1.27.2, modern Docker test harness, runtime hardening, and dependency maintenance are retained. Product-owned import paths, binaries, archives, images, Windows service names, and operator messages use PastureStack naming. Python test dependencies are fully pinned and cached in the disposable build image so clean-checkout tests do not depend on live PyPI availability. GitHub Actions runs repository validation and security checks. Release packaging remains manual, and no automatic production deployment is enabled.
 
 ## Configuration
 
@@ -33,7 +33,11 @@ client 0.5, gopsutil v4.26, mapstructure v2.5, netlink v1.3, and netns v0.0.5.
 The retired AWS SDK v1, Aliyungo, root Docker module, GOPATH/Godeps, and Trash
 dependency paths are not part of the build.
 
-For the reviewed `0.13.27` compatibility release, `VERSION_OVERRIDE=v0.13.27 CROSS=1 make package` produces the deterministic flat assets `node-agent-0.13.27.tar.gz` and `node-agent-0.13.27-windows-amd64.zip`. The Linux archive carries both the legacy SHA-1 manifests and the current SHA-256 manifests required by the host installer. PastureStack Server serves both assets from its matching GitHub Release and verifies their outer SHA-256 entries before use; operators do not need an artifact mirror. The Windows ZIP uses the neutral `pasturestack/` include layout. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported.
+`VERSION_OVERRIDE=v0.13.28 make package` produces the deterministic Linux asset `node-agent-0.13.28.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel.
+
+On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.5` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
+
+Windows retains the existing embedded compatibility path; this release does not provide Windows stream delegation or durable terminal evidence support. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported. The Server-distributed Windows artifact remains independently pinned to `0.13.27`; the Linux `0.13.28` candidate and CI cross-builds do not establish new Windows runtime acceptance.
 
 The `host.port.check` event performs a read-only host-port preflight through the existing agent event channel. It reports Docker bindings from running and stopped containers and, on Linux, listening TCP/UDP sockets visible through the existing host `/proc` mount. Incomplete host socket inspection is reported as unknown; it is never presented as an available port.
 
