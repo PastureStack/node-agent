@@ -21,19 +21,11 @@ func (d DiskCollector) GetData() (map[string]interface{}, error) {
 		"dockerStorageDriver":       infoData.Info.Driver,
 	}
 
-	mfs, err := d.getMachineFilesystems(infoData)
+	fileSystems, mountPoints, err := d.collectDiskInfo(infoData)
+	data["fileSystems"] = fileSystems
+	data["mountPoints"] = mountPoints
 	if err != nil {
 		return data, errors.Wrap(err, constants.DiskGetDataError+"failed get filesystem info")
-	}
-	for key, value := range mfs {
-		data["fileSystems"].(map[string]interface{})[key] = value
-	}
-	mp, err := d.getMountPoints()
-	if err != nil {
-		return data, errors.Wrap(err, constants.DiskGetDataError+"failed get mountpoint info")
-	}
-	for key, value := range mp {
-		data["mountPoints"].(map[string]interface{})[key] = value
 	}
 
 	return data, nil

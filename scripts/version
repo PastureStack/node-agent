@@ -5,4 +5,4 @@ if [ -n "$VERSION_OVERRIDE" ]; then
     return 0
 fi
 
-VERSION=v0.13.28
+VERSION=v0.13.29

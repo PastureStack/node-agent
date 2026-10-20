@@ -5,6 +5,15 @@ on:
     branches:
       - 'verification/node-agent-*'
   workflow_dispatch:
+    inputs:
+      validation_scope:
+        description: 'Full CI or focused host-disk tests and native cross-platform packages'
+        type: choice
+        required: true
+        default: full
+        options:
+          - full
+          - host-disk
 
 permissions:
   contents: read
@@ -30,37 +39,72 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           test -z "$(git status --short)"
 
+      - name: Install the release Go toolchain for host-disk validation
+        if: github.event_name == 'workflow_dispatch' && inputs.validation_scope == 'host-disk'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.27.2
+          check-latest: false
+          cache: false
+
       - name: Test and package immutable artifacts
         id: package
         env:
           CROSS: "1"
-          VERSION_OVERRIDE: v0.13.28
+          VERSION_OVERRIDE: v0.13.29
+          VALIDATION_SCOPE: ${{ inputs.validation_scope || 'full' }}
         run: |
           set -euo pipefail
-          make ci
-          linux_asset="dist/artifacts/node-agent-0.13.28.tar.gz"
-          windows_asset="dist/artifacts/node-agent-0.13.28-windows-amd64.zip"
+          case "$VALIDATION_SCOPE" in
+            full)
+              make ci
+              ;;
+            host-disk)
+              export GOTOOLCHAIN=local GOTELEMETRY=off GOWORK=off
+              export GOFLAGS=-mod=vendor GOPROXY=off GOSUMDB=off
+              export GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0
+              test "$(go version)" = 'go version go1.27.2 linux/amd64'
+              test -z "$(gofmt -l core/hostinfo/disk_info_linux.go core/hostinfo/disk_info_linux_test.go)"
+              go test -count=1 -v ./core/hostinfo ./core/ping
+              bash scripts/build
+              bash scripts/package
+              ;;
+            *)
+              printf 'Unknown validation scope: %s\n' "$VALIDATION_SCOPE" >&2
+              exit 1
+              ;;
+          esac
+          linux_asset="dist/artifacts/node-agent-0.13.29.tar.gz"
+          windows_asset="dist/artifacts/node-agent-0.13.29-windows-amd64.zip"
           test -s "$linux_asset"
           test -s "$windows_asset"
           gzip -t "$linux_asset"
           bash scripts/verify-package "$linux_asset"
           unzip -t "$windows_asset"
+          if [ "$VALIDATION_SCOPE" = host-disk ]; then
+            package_id=$(git rev-parse --short=32 HEAD)
+            tar -xOzf "$linux_asset" "$package_id/bin/node-agent" | cmp bin/linux/amd64/node-agent -
+            unzip -p "$windows_asset" pasturestack/node-agent.exe | cmp bin/windows/amd64/node-agent.exe -
+            unzip -p "$windows_asset" pasturestack/startup_node-agent.ps1 | cmp package/startup_agent.ps1 -
+            sha256sum bin/linux/amd64/node-agent bin/windows/amd64/node-agent.exe package/startup_agent.ps1
+          fi
           (
             cd dist/artifacts
             sha256sum \
-              node-agent-0.13.28.tar.gz \
-              node-agent-0.13.28-windows-amd64.zip >SHA256SUMS
+              node-agent-0.13.29.tar.gz \
+              node-agent-0.13.29-windows-amd64.zip >SHA256SUMS
+            sha256sum -c SHA256SUMS
           )
-          printf 'NODE_AGENT_VALIDATION_OK source=%s version=%s artifacts=linux,windows\n' \
-            "$GITHUB_SHA" "$VERSION_OVERRIDE"
+          printf 'NODE_AGENT_VALIDATION_OK source=%s version=%s scope=%s artifacts=linux,windows\n' \
+            "$GITHUB_SHA" "$VERSION_OVERRIDE" "$VALIDATION_SCOPE"
 
       - name: Retain reviewed release candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: node-agent-0.13.28
+          name: node-agent-0.13.29
           path: |
-            dist/artifacts/node-agent-0.13.28.tar.gz
-            dist/artifacts/node-agent-0.13.28-windows-amd64.zip
+            dist/artifacts/node-agent-0.13.29.tar.gz
+            dist/artifacts/node-agent-0.13.29-windows-amd64.zip
             dist/artifacts/SHA256SUMS
           if-no-files-found: error
           retention-days: 30

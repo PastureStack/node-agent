@@ -1,11 +1,14 @@
 package hostinfo
 
 import (
+	"errors"
+	"math"
+	"path/filepath"
+	"strings"
+
 	"github.com/PastureStack/node-agent/model"
 	"github.com/PastureStack/node-agent/utilities/utils"
 	"github.com/shirou/gopsutil/v4/disk"
-	"math"
-	"strings"
 )
 
 func (d DiskCollector) convertUnits(number uint64) float64 {
@@ -42,43 +45,40 @@ func (d DiskCollector) includeInFilesystem(infoData model.InfoData, device strin
 	return include
 }
 
-func (d DiskCollector) getMountPoints() (map[string]interface{}, error) {
-	data := map[string]interface{}{}
+func (d DiskCollector) collectDiskInfo(infoData model.InfoData) (map[string]interface{}, map[string]interface{}, error) {
+	fileSystems := map[string]interface{}{}
+	mountPoints := map[string]interface{}{}
 	partitions, err := disk.Partitions(false)
 	if err != nil {
-		return data, err
+		return fileSystems, mountPoints, err
 	}
+	root := diskUsageRoot()
+	var usageErrors []error
 	for _, partition := range partitions {
-		usage, err := disk.Usage(partition.Mountpoint)
-		if err != nil {
-			return map[string]interface{}{}, err
+		// Snap packages are read-only filesystem images, not host disk capacity.
+		if partition.Fstype == "squashfs" {
+			continue
 		}
-		data[partition.Device] = map[string]interface{}{
+		mountpoint := partition.Mountpoint
+		if root != "" {
+			mountpoint = filepath.Join(root, mountpoint)
+		}
+		usage, err := disk.Usage(mountpoint)
+		if err != nil {
+			usageErrors = append(usageErrors, err)
+			continue
+		}
+		mountPoints[partition.Device] = map[string]interface{}{
 			"free":       d.convertUnits(usage.Free),
 			"total":      d.convertUnits(usage.Total),
 			"used":       d.convertUnits(usage.Used),
 			"percentage": usage.UsedPercent,
 		}
-	}
-	return data, nil
-}
-
-func (d DiskCollector) getMachineFilesystems(infoData model.InfoData) (map[string]interface{}, error) {
-	data := map[string]interface{}{}
-	partitions, err := disk.Partitions(false)
-	if err != nil {
-		return data, err
-	}
-	for _, partition := range partitions {
 		if d.includeInFilesystem(infoData, partition.Device) {
-			usage, err := disk.Usage(partition.Mountpoint)
-			if err != nil {
-				return map[string]interface{}{}, err
-			}
-			data[utils.InterfaceToString(partition.Device)] = map[string]interface{}{
+			fileSystems[partition.Device] = map[string]interface{}{
 				"capacity": d.convertUnits(usage.Total),
 			}
 		}
 	}
-	return data, nil
+	return fileSystems, mountPoints, errors.Join(usageErrors...)
 }
