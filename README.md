@@ -4,7 +4,7 @@ Node Agent receives control-platform events on compute nodes, executes the corre
 
 PastureStack is an independent community effort to preserve, audit, and modernize the Rancher 1.6 ecosystem. It is not affiliated with or endorsed by Rancher Labs or SUSE.
 
-**Upstream:** [`rancher/agent`](https://github.com/rancher/agent). This GitHub fork preserves upstream history, authorship, dates, tags, licenses, and bundled dependency notices; PastureStack maintenance is consolidated into one commit after the preserved upstream boundary.
+**Upstream:** [`rancher/agent`](https://github.com/rancher/agent). This GitHub fork preserves upstream history, authorship, dates, tags, licenses, and bundled dependency notices.
 
 ## Project status
 
@@ -26,6 +26,10 @@ make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.29
 ```
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
+
+The published Linux package is [Node Agent v0.13.29](https://github.com/PastureStack/node-agent/releases/tag/v0.13.29).
+Its release contains the original validated archive and SHA-256 checksum; the
+outer bootstrap image version and the Go package version are separate identities.
 
 The authoritative build is Go modules with the checked-in `vendor/` tree. The
 runtime dependency baseline uses Go 1.27, AWS SDK for Go v2, Moby API 1.55 and
