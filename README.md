@@ -22,7 +22,7 @@ From a Docker-capable Linux host:
 make test
 make build
 make package
-make package-image IMAGE_NAME=pasturestack/node-agent TAG=poc
+make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.29
 ```
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
@@ -33,13 +33,21 @@ client 0.5, gopsutil v4.26, mapstructure v2.5, netlink v1.3, and netns v0.0.5.
 The retired AWS SDK v1, Aliyungo, root Docker module, GOPATH/Godeps, and Trash
 dependency paths are not part of the build.
 
-`VERSION_OVERRIDE=v0.13.28 make package` produces the deterministic Linux asset `node-agent-0.13.28.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel.
+`VERSION_OVERRIDE=v0.13.29 make package` produces the deterministic Linux asset `node-agent-0.13.29.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel.
 
 On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.5` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
 
-Windows retains the existing embedded compatibility path; this release does not provide Windows stream delegation or durable terminal evidence support. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported. The Server-distributed Windows artifact remains independently pinned to `0.13.27`; the Linux `0.13.28` candidate and CI cross-builds do not establish new Windows runtime acceptance.
+Windows retains the existing embedded compatibility path; this release does not provide Windows stream delegation or durable terminal evidence support. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported. The Server-distributed Windows artifact remains independently pinned to `0.13.27`; Linux `0.13.29` and CI cross-builds do not establish new Windows runtime acceptance.
 
 The `host.port.check` event performs a read-only host-port preflight through the existing agent event channel. It reports Docker bindings from running and stopped containers and, on Linux, listening TCP/UDP sockets visible through the existing host `/proc` mount. Incomplete host socket inspection is reported as unknown; it is never presented as an available port.
+
+Linux disk information reads filesystem usage through the root of the process
+whose mounts are enumerated, including when the agent has a separate mount
+namespace. Direct host execution retains direct paths. Read-only Snap filesystem
+images are excluded from disk capacity; an unreadable mount reports a collection
+warning while preserving other successfully collected filesystems and mount points.
+Host `localStorageMb` reports available space in whole MiB, not total disk capacity;
+`CATTLE_LOCAL_STORAGE_MB_OVERRIDE` retains priority over the measured value.
 
 The test harness starts a disposable inner Docker daemon and generates its BusyBox image, build contexts, and Git fixtures locally. It does not mount the host Docker socket or depend on mutable registry images and retired external test endpoints.
 

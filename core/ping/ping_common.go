@@ -100,7 +100,7 @@ func addResource(ping *revents.Event, pong *model.PingResponse, dockerClient *cl
 		if err != nil {
 			log.Errorf("Error getting local storage usage: %v", err)
 		} else {
-			compute.LocalStorageMb = uint64(usage.Free) / 1000
+			compute.LocalStorageMb = localStorageMiB(usage.Free)
 		}
 	}
 
@@ -127,6 +127,10 @@ func addResource(ping *revents.Event, pong *model.PingResponse, dockerClient *cl
 	}
 	pong.Resources = append(pong.Resources, physicalHost, compute, pool, ip)
 	return nil
+}
+
+func localStorageMiB(freeBytes uint64) uint64 {
+	return freeBytes / (1024 * 1024)
 }
 
 func getResourceOverride(envVar string) uint64 {
