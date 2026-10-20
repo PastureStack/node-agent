@@ -24,13 +24,15 @@ func diskFixture(t *testing.T, sameNamespace bool) (string, string) {
 	}
 	writeDiskFixture(t, filepath.Join(proc, "filesystems"), "ext4\nsquashfs\n")
 	selfNamespace := filepath.Join(proc, "self", "ns", "mnt")
-	writeDiskFixture(t, selfNamespace, "self")
+	if err := os.Symlink("mnt:[1]", selfNamespace); err != nil {
+		t.Fatal(err)
+	}
+	hostNamespace := "mnt:[2]"
 	if sameNamespace {
-		if err := os.Link(selfNamespace, filepath.Join(proc, "1", "ns", "mnt")); err != nil {
-			t.Fatal(err)
-		}
-	} else {
-		writeDiskFixture(t, filepath.Join(proc, "1", "ns", "mnt"), "host")
+		hostNamespace = "mnt:[1]"
+	}
+	if err := os.Symlink(hostNamespace, filepath.Join(proc, "1", "ns", "mnt")); err != nil {
+		t.Fatal(err)
 	}
 	if err := os.Symlink(hostRoot, filepath.Join(proc, "1", "root")); err != nil {
 		t.Fatal(err)
@@ -120,10 +122,74 @@ func TestDiskUsageRootHonorsMountInfoOverrideAndSelfFallback(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(custom, "ns"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	writeDiskFixture(t, filepath.Join(custom, "ns", "mnt"), "custom")
+	if err := os.Symlink("mnt:[3]", filepath.Join(custom, "ns", "mnt")); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("HOST_PROC_MOUNTINFO", filepath.Join(custom, "mountinfo"))
 	if got := diskUsageRoot(); got != filepath.Join(custom, "root") {
 		t.Fatalf("override root differs from enumerated process: %s", got)
+	}
+}
+
+func TestDiskNamespaceReadsOnlyAnIdentifier(t *testing.T) {
+	for _, target := range []string{"/etc/passwd", "../other/ns/mnt", "mnt:[1]/../../other", "mnt:[+1]", "mnt:[-1]", "mnt:[]", "mnt:[0]", "mnt:[18446744073709551616]", "mnt:[1]\n"} {
+		t.Run(target, func(t *testing.T) {
+			process := t.TempDir()
+			if err := os.Mkdir(filepath.Join(process, "ns"), 0700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(target, filepath.Join(process, "ns", "mnt")); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := diskMountNamespace(process); !errors.Is(err, os.ErrInvalid) {
+				t.Fatalf("non-namespace link must be rejected, got %v", err)
+			}
+		})
+	}
+}
+
+func TestDiskNamespaceReadFailureDoesNotAssumeSameNamespace(t *testing.T) {
+	proc, _ := diskFixture(t, false)
+	writeDiskFixture(t, filepath.Join(proc, "1", "mountinfo"), "")
+	if err := os.Remove(filepath.Join(proc, "1", "ns", "mnt")); err != nil {
+		t.Fatal(err)
+	}
+	if got := diskUsageRoot(); got != filepath.Join(proc, "1", "root") {
+		t.Fatalf("unavailable namespace must keep the enumerated process root: %s", got)
+	}
+}
+
+func TestDiskNamespaceSupportsRelativeProcSelfAlias(t *testing.T) {
+	proc, _ := diskFixture(t, true)
+	writeDiskFixture(t, filepath.Join(proc, "1", "mountinfo"), "")
+	if err := os.Rename(filepath.Join(proc, "self"), filepath.Join(proc, "123")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("123", filepath.Join(proc, "self")); err != nil {
+		t.Fatal(err)
+	}
+	if got := diskUsageRoot(); got != "" {
+		t.Fatalf("a proc self alias in the same namespace must retain direct paths: %s", got)
+	}
+}
+
+func TestDiskNamespaceSupportsRealProcMagicLinks(t *testing.T) {
+	if _, err := diskMountNamespace("/proc/self"); err != nil {
+		t.Fatalf("the current process namespace must be readable without following its magic target: %v", err)
+	}
+}
+
+func TestDiskNamespaceRejectsParentSymlinkEscape(t *testing.T) {
+	process := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Symlink("mnt:[1]", filepath.Join(outside, "mnt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(process, "ns")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := diskMountNamespace(process); err == nil {
+		t.Fatal("a namespace directory outside the selected process root must not be read")
 	}
 }
 

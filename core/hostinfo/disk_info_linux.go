@@ -6,6 +6,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 // gopsutil enumerates /proc/1's mounts by default, even when the agent has
@@ -23,13 +25,42 @@ func diskUsageRoot() string {
 		process = filepath.Join(proc, "self")
 	}
 
-	hostNamespace, hostErr := os.Stat(filepath.Join(process, "ns", "mnt"))
-	selfNamespace, selfErr := os.Stat(filepath.Join(proc, "self", "ns", "mnt"))
-	if hostErr == nil && selfErr == nil && os.SameFile(hostNamespace, selfNamespace) {
+	hostNamespace, hostErr := diskMountNamespace(process)
+	selfNamespace, selfErr := diskMountNamespace(filepath.Join(proc, "self"))
+	if hostErr == nil && selfErr == nil && hostNamespace == selfNamespace {
 		// Preserve direct host operation without requiring access to PID 1's root.
 		return ""
 	}
 	return filepath.Join(process, "root")
+}
+
+// The configured proc directory is operator-owned, like gopsutil's mount-table
+// source. Read only the fixed namespace link within it; its target is an
+// identifier, never a filesystem path to follow (proc namespace links are magic).
+func diskMountNamespace(process string) (uint64, error) {
+	directory, err := os.OpenRoot(process)
+	if err != nil {
+		return 0, err
+	}
+	defer directory.Close()
+	identifier, err := directory.Readlink("ns/mnt")
+	if err != nil {
+		return 0, err
+	}
+	if !strings.HasPrefix(identifier, "mnt:[") || !strings.HasSuffix(identifier, "]") {
+		return 0, os.ErrInvalid
+	}
+	value := identifier[len("mnt:[") : len(identifier)-1]
+	for _, digit := range value {
+		if digit < '0' || digit > '9' {
+			return 0, os.ErrInvalid
+		}
+	}
+	namespace, err := strconv.ParseUint(value, 10, 64)
+	if err != nil || namespace == 0 {
+		return 0, os.ErrInvalid
+	}
+	return namespace, nil
 }
 
 func hasDiskMountTable(process string) bool {

@@ -64,6 +64,7 @@ jobs:
               export GOFLAGS=-mod=vendor GOPROXY=off GOSUMDB=off
               export GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0
               test "$(go version)" = 'go version go1.27.2 linux/amd64'
+              test -z "$(gofmt -l core/hostinfo/disk_info_linux.go core/hostinfo/disk_info_linux_test.go)"
               go test -count=1 -v ./core/hostinfo ./core/ping
               bash scripts/build
               bash scripts/package
