@@ -57,6 +57,11 @@ jobs:
           gzip -t dist/artifacts/node-agent-0.13.30.tar.gz
           bash scripts/verify-package dist/artifacts/node-agent-0.13.30.tar.gz
           unzip -t dist/artifacts/node-agent-0.13.30-windows-amd64.zip
+          (
+            cd dist/artifacts
+            sha256sum node-agent-0.13.30.tar.gz node-agent-0.13.30-windows-amd64.zip > SHA256SUMS
+            sha256sum -c SHA256SUMS
+          )
           sha256sum dist/artifacts/node-agent-0.13.30.tar.gz \
             dist/artifacts/node-agent-0.13.30-windows-amd64.zip \
             bin/node-agent bin/windows/amd64/node-agent.exe > evidence/product-artifacts.sha256
@@ -81,6 +86,10 @@ jobs:
             version -m /work/bin/windows/amd64/node-agent.exe > evidence/windows-product-go-version.txt
           grep -F 'go1.27.3' evidence/windows-product-go-version.txt >/dev/null
           grep -F $'build\tGOOS=windows' evidence/windows-product-go-version.txt >/dev/null
+          for report in evidence/product-go-version.txt evidence/windows-product-go-version.txt; do
+            grep -Fx $'\tbuild\tvcs.revision='"$GITHUB_SHA" "$report" >/dev/null
+            grep -Fx $'\tbuild\tvcs.modified=false' "$report" >/dev/null
+          done
 
       - name: Scan source, product, runtime, and build image
         shell: bash
@@ -233,6 +242,18 @@ jobs:
               assert len(bom.get('components', [])) > 0
               print('{}_components={}'.format(scope, len(bom['components'])))
           PY
+
+      - name: Retain exact scanned release packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-agent-scanned-0.13.30
+          path: |
+            dist/artifacts/node-agent-0.13.30.tar.gz
+            dist/artifacts/node-agent-0.13.30-windows-amd64.zip
+            dist/artifacts/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
 
       - name: Upload reviewed evidence
         if: always()
