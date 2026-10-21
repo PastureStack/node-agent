@@ -8,5 +8,17 @@ LABEL org.opencontainers.image.source="https://github.com/PastureStack/node-agen
       org.opencontainers.image.version="${PASTURESTACK_IMAGE_VERSION}"
 
 RUN rm -f /usr/bin/pebble
+COPY libssl3t64.deb openssl-provider-legacy.deb /tmp/
+RUN set -eu; \
+    for package in libssl3t64 openssl-provider-legacy; do \
+        test "$(dpkg-deb -f "/tmp/${package}.deb" Package)" = "$package"; \
+        test "$(dpkg-deb -f "/tmp/${package}.deb" Version)" = 3.5.5-1ubuntu3.7; \
+        test "$(dpkg-deb -f "/tmp/${package}.deb" Architecture)" = amd64; \
+    done; \
+    dpkg -i /tmp/libssl3t64.deb /tmp/openssl-provider-legacy.deb; \
+    for package in libssl3t64 openssl-provider-legacy; do \
+        test "$(dpkg-query -W -f='${Version}' "$package")" = 3.5.5-1ubuntu3.7; \
+        rm -f "/tmp/${package}.deb"; \
+    done
 COPY node-agent /usr/bin/
 CMD ["node-agent"]
