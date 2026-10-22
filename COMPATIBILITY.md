@@ -2,6 +2,20 @@
 
 The node agent preserves established event names, reply payloads, generated client schemas, Docker labels, state fields, registration-script inputs, and storage-driver identifiers consumed by existing deployments.
 
+## Linux Host API producer in 0.13.31
+
+The source package version is `0.13.31`. Its Linux supervisor requires exactly
+Host API `0.38.7`, installed first through the existing authenticated configcontent
+package sequence. Version mismatch still closes Host API admission without a
+legacy fallback. Fixed producer paths, agent identity forwarding, executable
+ownership checks, parent-bound lifetime, package layout, and both SHA-1 and
+SHA-256 verification contracts are unchanged. Node does not implement stream
+authorization or terminal-cause arbitration.
+
+Linux and Windows cross-packaging share this source version. Windows retains its
+existing embedded compatibility path; cross-builds are not Windows runtime or
+delegated-stream acceptance. Source versions are not publication evidence.
+
 ## Linux Host disk reporting in 0.13.29
 
 Filesystem enumeration and usage measurement use the same process mount view.

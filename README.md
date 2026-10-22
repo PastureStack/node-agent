@@ -22,12 +22,12 @@ From a Docker-capable Linux host:
 make test
 make build
 make package
-make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.30
+make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.31
 ```
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
 
-The current recipe packages version `0.13.30`. Source changes alone are not
+The current recipe packages version `0.13.31`. Source changes alone are not
 publication proof: use the [official releases](https://github.com/PastureStack/node-agent/releases)
 and their SHA-256 checksums to verify published packages. Published tags and assets
 remain immutable; later documentation commits do not change their producer identity.
@@ -39,9 +39,9 @@ client 0.5, gopsutil v4.26, mapstructure v2.5, netlink v1.3, and netns v0.0.5.
 The retired AWS SDK v1, Aliyungo, root Docker module, GOPATH/Godeps, and Trash
 dependency paths are not part of the build.
 
-`VERSION_OVERRIDE=v0.13.30 make package` produces the deterministic Linux asset `node-agent-0.13.30.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
+`VERSION_OVERRIDE=v0.13.31 make package` produces the deterministic Linux asset `node-agent-0.13.31.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
 
-On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.6` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
+On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.7` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
 
 Windows retains the existing embedded compatibility path; this release does not provide Windows stream delegation or durable terminal evidence support. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported. The Server recipe independently pins its Windows artifact; a Linux package publication and CI cross-builds do not establish new Windows runtime acceptance.
 
