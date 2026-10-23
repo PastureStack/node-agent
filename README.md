@@ -79,3 +79,22 @@ patched candidate.
 ### Complete build-environment gate
 
 The Dapper scan retains all severities and requires nonempty package analysis for the expected Go binaries. Any available fixed version fails, including Low, Medium and Unknown findings. Other Low/Medium findings require an exact package/version/PURL entry backed by the official vendor tracker. The pinned userspace kernel-header exception additionally requires the reviewed CVE set, actual header payload paths, and absence of kernel images/modules; it never permits an available fix. Unknown module findings require the separately verified exact source package graph, not a generic severity exemption.
+
+The disposable builder uses official Docker 29.9.2 CLI/daemon bytes, with its
+supported Go 1.26.10 compiler, rather than Ubuntu's outdated embedded Go tools.
+Containerd stays on the 2.2 compatibility branch at 2.2.10 and runc stays on 1.4
+at 1.4.3; both are rebuilt from SHA-pinned released sources using Go 1.27.3 and
+released security-fixed dependencies. Runc retains seccomp. Containerd's build
+omits the unused Btrfs snapshotter; the actual test daemon uses overlay2/vfs.
+These are builder-only changes, not a host Docker upgrade or a new deployment
+recipe. CI exercises the real inner daemon and package-image build, independently
+scans all seven container-tool ELF files, and fails if any expected analysis is
+missing. Complete raw image and standalone ELF reports are retained.
+
+The daemon's reachable distribution metadata API retains CVE-2026-85747 as an
+exact reviewed Medium no-fix finding: the official advisory has no released
+docker/distribution v2 fix. The v3.1.2 fix is a different module major; neither an
+unpublished v2 commit nor the CLI's digest mitigation is substituted. Future
+official fixed-version findings remain blocking. The exact official daemon's
+OpenPGP absence is separately checked against its SHA and nonempty crypto symbol
+control; it does not exempt the distribution finding.

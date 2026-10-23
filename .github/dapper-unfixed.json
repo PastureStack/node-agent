@@ -79,15 +79,15 @@
       "officialEvidence": "https://git.launchpad.net/ubuntu-cve-tracker/plain/active/CVE-2025-60876"
     },
     {
-      "package": "containerd",
-      "purl": "pkg:deb/ubuntu/containerd@2.2.2-0ubuntu1.1?arch=amd64&distro=ubuntu-26.04",
+      "package": "github.com/docker/distribution",
+      "purl": "pkg:golang/github.com/docker/distribution@v2.8.3%2Bincompatible",
       "checkedAt": "2026-10-23",
       "status": "no_official_fix",
-      "id": "CVE-2026-46680",
+      "id": "CVE-2026-85747",
       "severity": "MEDIUM",
-      "reason": "Canonical Ubuntu 26.04 official tracker: resolute_containerd: needed; no official fixed package available.",
-      "version": "2.2.2-0ubuntu1.1",
-      "officialEvidence": "https://git.launchpad.net/ubuntu-cve-tracker/plain/active/CVE-2026-46680"
+      "reason": "The official advisory lists all docker/distribution v2 releases through v2.8.3 as affected and no patched v2 release. The released v3.1.2 fix uses a different import major. The daemon metadata API is reachable and is not covered by the CLI digest-check mitigation. Retain the raw Medium finding; do not use unpublished commits or a not-affected VEX. Any future FixedVersion fails the gate.",
+      "version": "v2.8.3+incompatible",
+      "officialEvidence": "https://github.com/distribution/distribution/security/advisories/GHSA-685w-q87j-wqw3"
     },
     {
       "package": "dash",

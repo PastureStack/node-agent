@@ -60,12 +60,26 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
         expected += ["usr/bin/docker", "usr/libexec/docker/cli-plugins/docker-buildx"]
     if repository == "PastureStack/kubernetes-authentication-bridge":
         expected += ["usr/bin/docker", "usr/local/libexec/docker/cli-plugins/docker-buildx"]
+    if repository == "PastureStack/node-agent":
+        expected += ["usr/bin/" + name for name in (
+            "docker", "dockerd", "docker-proxy", "containerd",
+            "containerd-shim-runc-v2", "ctr", "runc")]
     binaries = {r.get("Target"): r for r in results if r.get("Type") == "gobinary"}
     for target in expected:
         if not binaries.get(target, {}).get("Packages"):
             raise ValueError("missing nonempty binary analysis: " + target)
     if any(not result.get("Packages") for result in binaries.values()):
         raise ValueError("incomplete Go binary package analysis")
+    if repository == "PastureStack/node-agent" and node_proof:
+        graphs = node_proof.get("containerGraphs", {})
+        roots = {name: "github.com/containerd/containerd/v2/cmd/" + name
+                 for name in ("containerd", "ctr", "containerd-shim-runc-v2")}
+        roots["runc"] = "github.com/opencontainers/runc"
+        if set(graphs) != set(roots) or any(
+                root not in graphs[name].splitlines() or any(
+                    p == "golang.org/x/crypto/openpgp" or p.startswith("golang.org/x/crypto/openpgp/")
+                    for p in graphs[name].splitlines()) for name, root in roots.items()):
+            raise ValueError("missing exact container-tool package graphs")
     has_headers = any(f.get("PkgName") == "linux-libc-dev" for r in results for f in (r.get("Vulnerabilities") or []))
     if has_headers and header_boundary != {"package": "linux-libc-dev", "version": "7.0.0-38.38",
                                            "kernel_images": False, "kernel_modules": False}:
@@ -125,9 +139,21 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                     and len(docker_proof.get("binarySha256", "")) == 64):
                 continue
             if (unfixed and repository == "PastureStack/node-agent" and node_proof):
-                if (key == ("CVE-2025-54388", "docker.io", "29.1.3-0ubuntu4.1",
-                            "pkg:deb/ubuntu/docker.io@29.1.3-0ubuntu4.1?arch=amd64&distro=ubuntu-26.04")
-                        and "Docker version 29.1.3," in node_proof.get("dockerdVersion", "")):
+                daemon = node_proof.get("dockerdOpenpgp", {})
+                if (key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
+                            "pkg:golang/golang.org/x/crypto@v0.58.0")
+                        and result.get("Target") == "usr/bin/dockerd"
+                        and daemon.get("binarySha256") == "3a6132d4d99c1437e3422599f802207a3def9ba4de00ec1004a8e40d2740b9b0"
+                        and daemon.get("sourceCommit") == "0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c"
+                        and daemon.get("cryptoSymbols", 0) > 0
+                        and daemon.get("openpgpSymbols") == 0):
+                    continue
+                graphs = node_proof.get("containerGraphs", {})
+                if (key == ("GO-2026-5932", "golang.org/x/crypto", "v0.57.0",
+                            "pkg:golang/golang.org/x/crypto@v0.57.0")
+                        and result.get("Target") in ("usr/bin/containerd", "usr/bin/ctr", "usr/bin/containerd-shim-runc-v2")
+                        and set(graphs) == {"containerd", "ctr", "containerd-shim-runc-v2", "runc"}
+                        and all(graph and not any(p == "golang.org/x/crypto/openpgp" or p.startswith("golang.org/x/crypto/openpgp/") for p in graph.splitlines()) for graph in graphs.values())):
                     continue
                 pip = node_proof.get("pip", {})
                 if (key[0] in ("CVE-2025-66418", "CVE-2025-66471", "CVE-2026-21441", "CVE-2026-1703")
@@ -169,7 +195,8 @@ if __name__ == "__main__":
         node_proof = None
         if args.repository == "PastureStack/node-agent":
             node_proof = {"pip": json.loads((repo_root / evidence_dir / "pip-vendor-proof.json").read_text(encoding="utf-8")),
-                          "dockerdVersion": (repo_root / evidence_dir / "dockerd-version.txt").read_text(encoding="utf-8")}
+                          "dockerdOpenpgp": json.loads((repo_root / evidence_dir / "dockerd-openpgp-proof.json").read_text(encoding="utf-8")),
+                          "containerGraphs": {name: (repo_root / evidence_dir / "container-tools" / (name + "-package-graph.txt")).read_text(encoding="utf-8") for name in ("containerd", "ctr", "containerd-shim-runc-v2", "runc")}}
         failures = builder_violations(report, ledger, args.repository, boundary, headers, graphs, docker_proof, node_proof)
     if failures:
         raise SystemExit("Release vulnerability policy failed:\n" + "\n".join(failures))
