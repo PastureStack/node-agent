@@ -96,5 +96,11 @@ exact reviewed Medium no-fix finding: the official advisory has no released
 docker/distribution v2 fix. The v3.1.2 fix is a different module major; neither an
 unpublished v2 commit nor the CLI's digest mitigation is substituted. Future
 official fixed-version findings remain blocking. The exact official daemon's
-OpenPGP absence is separately checked against its SHA and nonempty crypto symbol
-control; it does not exempt the distribution finding.
+`golang.org/x/crypto/openpgp` absence is separately checked against its SHA and
+nonempty crypto symbol control; it does not exempt the distribution finding.
+The retained 2,078-package daemon source graph is from official commit
+`0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c`, Linux/amd64, CGO=1 and official tags
+`netgo,osusergo,static_build,nri_no_wasm,journald`, resolved offline from the
+official vendor tree using Go 1.27.3. That analysis compiler is not the official
+binary's Go 1.26.10 compiler. The graph includes ProtonMail's distinct OpenPGP
+implementation; no claim is made that all OpenPGP code is absent.

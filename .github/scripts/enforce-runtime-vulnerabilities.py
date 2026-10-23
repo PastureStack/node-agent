@@ -145,6 +145,7 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                         and result.get("Target") == "usr/bin/dockerd"
                         and daemon.get("binarySha256") == "3a6132d4d99c1437e3422599f802207a3def9ba4de00ec1004a8e40d2740b9b0"
                         and daemon.get("sourceCommit") == "0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c"
+                        and daemon.get("sourcePackageGraphSha256") == "5b64dcb5265f1d7345e94688a0ee0700887000359cd25cc8f184d88835e79fd4"
                         and daemon.get("cryptoSymbols", 0) > 0
                         and daemon.get("openpgpSymbols") == 0):
                     continue
