@@ -22,12 +22,12 @@ From a Docker-capable Linux host:
 make test
 make build
 make package
-make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.32
+make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.33
 ```
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
 
-The current recipe packages version `0.13.32`. Source changes alone are not
+The current recipe packages version `0.13.33`. Source changes alone are not
 publication proof: use the [official releases](https://github.com/PastureStack/node-agent/releases)
 and their SHA-256 checksums to verify published packages. Published tags and assets
 remain immutable; later documentation commits do not change their producer identity.
@@ -39,7 +39,14 @@ client 0.5, gopsutil v4.26, mapstructure v2.5, netlink v1.3, and netns v0.0.5.
 The retired AWS SDK v1, Aliyungo, root Docker module, GOPATH/Godeps, and Trash
 dependency paths are not part of the build.
 
-`VERSION_OVERRIDE=v0.13.32 make package` produces the deterministic Linux asset `node-agent-0.13.32.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
+`VERSION_OVERRIDE=v0.13.33 make package` produces the deterministic Linux asset `node-agent-0.13.33.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
+
+Upgrade existing Linux hosts through that established configcontent/pyagent
+sequence, installing the compatible Host API package before Node. Keep the
+existing platform-home data volume and Host ID; do not register a replacement
+host or create a replacement state volume. Read the installed Node version with
+`${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/node-agent/node-agent --version`;
+the expected result is `node-agent version v0.13.33`.
 
 On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.8` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
 
@@ -68,14 +75,22 @@ Maintained Go builds select the patched Go 1.27.3 compiler without raising the e
 
 The disposable Dapper image rebuilds pip `26.2.2+pasturestack.1` from checksum-pinned official inputs using upstream vendoring and the original urllib3 patches. Only urllib3 changes to released `2.8.0`; this is a local security rebuild, not a new official PyPA release. The expected wheel SHA-256 is `be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a`. Ubuntu's Python ABI is retained. The image tests live pip, available ensurepip/new-venv seeds, virtualenv, streaming limits, and trusted/untrusted TLS. See `scripts/pip-security/README.md` for source and license evidence.
 
-## Full-severity security rebuild candidate
+## Full-severity security rebuild
 
-The next compatible release candidate is **v0.13.33**, not yet published. It updates only already-installed Ubuntu 26.04 packages using the official signed 2026-10-23 snapshot and obtains the trust bundle from the SHA-pinned official CA package. Host ID, persistent agent state, startup arguments and the required host-api v0.38.8 remain unchanged.
+The maintained release is **v0.13.33**. It updates only already-installed Ubuntu 26.04 packages using the official signed 2026-10-23 snapshot and obtains the trust bundle from the SHA-pinned official CA package. Host ID, persistent agent state, startup arguments and the required host-api v0.38.8 remain unchanged.
+
+The [successful producer gate](https://github.com/PastureStack/node-agent/actions/runs/39984353202)
+built commit `0aadd6f79890c994da2c047214a2a224471f9191`; signed release tag
+`v0.13.33` points to merged commit `2025a5a9a03c645fc18d1a2c8a345617888c2a57`
+with the identical source tree. The [formal publisher](https://github.com/PastureStack/node-agent/actions/runs/39986320411)
+retained those exact tested Linux/Windows archives and runtime image.
+Published OCI verification digest:
+`sha256:8f961ac120e3ef812ddf750d6431a99993e62077ece4a432f220a65e8dbb3877`.
 
 The full-severity runtime gate rejects every finding with an official fix,
 including LOW, MEDIUM and UNKNOWN. Only exact reviewed LOW/MEDIUM no-fix entries
-may pass. Existing v0.13.32 remains published for provenance, but is not the fully
-patched candidate.
+may pass. The original all-severity reports, exact no-fix decisions and
+binary-specific package-graph evidence are retained independently.
 ### Complete build-environment gate
 
 The Dapper scan retains all severities and requires nonempty package analysis for the expected Go binaries. Any available fixed version fails, including Low, Medium and Unknown findings. Other Low/Medium findings require an exact package/version/PURL entry backed by the official vendor tracker. The pinned userspace kernel-header exception additionally requires the reviewed CVE set, actual header payload paths, and absence of kernel images/modules; it never permits an available fix. Unknown module findings require the separately verified exact source package graph, not a generic severity exemption.
@@ -88,7 +103,7 @@ released security-fixed dependencies. Runc retains seccomp. Containerd
 uses released imgcrypt 2.0.3 / ocicrypt 1.3.2 to retain encrypted-image PGP
 support through the maintained ProtonMail implementation; CI tests that wrapper
 and requires the deprecated x/crypto OpenPGP package to be absent.
-omits the unused Btrfs snapshotter; the actual test daemon uses overlay2/vfs.
+It omits the unused Btrfs snapshotter; the actual test daemon uses overlay2/vfs.
 These are builder-only changes, not a host Docker upgrade or a new deployment
 recipe. CI exercises the real inner daemon and package-image build, independently
 scans all seven container-tool ELF files, and fails if any expected analysis is
