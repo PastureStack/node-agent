@@ -256,12 +256,8 @@ jobs:
       - name: Enforce full runtime vulnerability policy
         run: |
           python3 .github/scripts/test_runtime_vulnerability_policy.py
-          python3 .github/scripts/enforce-runtime-vulnerabilities.py \
-            evidence/runtime-security.json .github/runtime-unfixed.json \
-            --repository PastureStack/node-agent
-          python3 .github/scripts/enforce-runtime-vulnerabilities.py \
-            evidence/product-security.json .github/runtime-unfixed.json \
-            --repository PastureStack/node-agent
+          python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/runtime-security.json
+          python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/product-security.json
 
       - name: Retain exact runtime for immutable release
         shell: bash
