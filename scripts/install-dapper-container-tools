@@ -14,11 +14,11 @@ fetch() {
     printf '%s  %s\n' "$3" "$2" | sha256sum -c -
 }
 fetch https://raw.githubusercontent.com/moby/moby/0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c/LICENSE \
-    "$proof/docker-LICENSE" 3f0cfdfd5c7ab8cfc8169a57384e297e60f4fe4e8d1060ec4c21c11435d89564
+    "$proof/docker-LICENSE" 7c87873291f289713ac5df48b1f2010eb6963752bbd6b530416ab99fc37914a8
 fetch https://raw.githubusercontent.com/moby/moby/0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c/NOTICE \
-    "$proof/moby-NOTICE" 4bb4a5457d22fe492c9fdc6d97fd03047380f36e83c3afb6f3730cccb6d8d0c9
+    "$proof/moby-NOTICE" a249c4197359eee43031d16cecb172326f92ee7b6701af99dfe5c3e5b3d5eca9
 fetch https://raw.githubusercontent.com/docker/cli/a82e528901260c8df6073311379eac65f92db204/NOTICE \
-    "$proof/docker-cli-NOTICE" a6dc343629353d41f43fa5398e05594b47eca9b404c0ebb839610a50910fd230
+    "$proof/docker-cli-NOTICE" a8c869fbda819afb8d80e0ac19bac52e766bc6c19cb38cf94f52d64c4be2aab6
 fetch https://download.docker.com/linux/static/stable/x86_64/docker-29.9.2.tgz \
     "$work/docker.tgz" 9ac225999fd5e863f7694c728ef23d480616b1e5639328fa309befd4243d69eb
 tar -xzf "$work/docker.tgz" -C "$work" docker/docker docker/dockerd docker/docker-proxy docker/docker-init
