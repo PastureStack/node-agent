@@ -1,4 +1,21 @@
+# syntax=docker/dockerfile:1.7
+FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b AS certificates
+COPY ca-certificates.deb /tmp/ca-certificates.deb
+RUN set -eu; \
+    test "$(dpkg-deb -f /tmp/ca-certificates.deb Version)" = 20260816ubuntu0.26.04.1; \
+    dpkg-deb --extract /tmp/ca-certificates.deb /ca; \
+    mkdir -p /out; \
+    find /ca/usr/share/ca-certificates -type f -name '*.crt' | LC_ALL=C sort | \
+        while IFS= read -r certificate; do sed -e '$a\' "$certificate"; done > /out/ca-certificates.crt; \
+    test -s /out/ca-certificates.crt; \
+    test ! -e /ca/usr/share/ca-certificates/mozilla/emSign_ECC_Root_CA_-_G3.crt
+
 FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b
+
+COPY --from=certificates /out/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=certificates /ca/usr/share/doc/ca-certificates/ /licenses/ca-certificates/
+COPY ubuntu-security-packages.lock /licenses/ubuntu-security-packages.lock
+COPY install-ubuntu-security-updates /usr/local/libexec/pasturestack/install-ubuntu-security-updates
 
 ARG PASTURESTACK_IMAGE_VERSION=dev
 
@@ -20,5 +37,7 @@ RUN set -eu; \
         test "$(dpkg-query -W -f='${Version}' "$package")" = 3.5.5-1ubuntu3.7; \
         rm -f "/tmp/${package}.deb"; \
     done
+RUN sh /usr/local/libexec/pasturestack/install-ubuntu-security-updates \
+        /licenses/ubuntu-security-packages.lock /etc/ssl/certs/ca-certificates.crt
 COPY node-agent /usr/bin/
 CMD ["node-agent"]
