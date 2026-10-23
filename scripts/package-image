@@ -49,7 +49,7 @@ curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
 printf '%s  %s\n' 51cf418571059831096abd40e0bd5debaa1ae48a6f8d87d9e4e5f7f12aa4db52 \
     "$tmpdir/openssl-provider-legacy.deb" | sha256sum --check
 
-DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}" docker build \
+docker build \
     --network="${DOCKER_BUILD_NETWORK:-default}" \
     --build-arg PASTURESTACK_IMAGE_VERSION="${tag}" \
     -t "${image_name}:${tag}" \

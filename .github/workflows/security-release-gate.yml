@@ -125,6 +125,7 @@ jobs:
           docker run --rm --entrypoint python3 "$DAPPER_IMAGE" \
             /opt/python-security/scripts/check-pip-vendor-slice.py \
             > evidence/pip-vendor-proof.json
+          docker run --rm --entrypoint dockerd "$DAPPER_IMAGE" --version > evidence/dockerd-version.txt
           python3 scripts/pip-security/test-pip-vex.py
           python3 scripts/pip-security/filter-pip-vendor-findings.py \
             --raw evidence/dapper-security-raw.json --proof evidence/pip-vendor-proof.json \
@@ -255,6 +256,11 @@ jobs:
 
       - name: Enforce full runtime vulnerability policy
         run: |
+          bash .github/scripts/check-builder-header-boundary.sh "$DAPPER_IMAGE" > evidence/dapper-header-boundary.json
+          python3 .github/scripts/test_builder_vulnerability_policy.py
+          python3 .github/scripts/test_node_builder_vex.py
+          cp security/dapper-runtime-metadata.openvex.json evidence/
+          python3 .github/scripts/enforce-runtime-vulnerabilities.py --scope builder --repository PastureStack/node-agent < evidence/dapper-security.json
           python3 .github/scripts/test_runtime_vulnerability_policy.py
           python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/runtime-security.json
           python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/product-security.json
