@@ -1,4 +1,4 @@
-﻿Write-Host "Packaging"
+Write-Host "Packaging"
 
 cd $PSScriptRoot/../..
 

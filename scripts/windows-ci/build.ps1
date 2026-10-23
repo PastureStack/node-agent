@@ -1,4 +1,4 @@
-﻿Write-Host "Building"
+Write-Host "Building"
 
 cd $PSScriptRoot/../..
 

@@ -19,9 +19,9 @@ jobs:
     timeout-minutes: 120
     env:
       DAPPER_IMAGE: pasturestack/node-agent-dapper:${{ github.sha }}
-      RUNTIME_IMAGE: pasturestack/node-agent:v0.13.31
+      RUNTIME_IMAGE: pasturestack/node-agent:v0.13.32
       TRIVY_IMAGE: aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
-      VERSION_OVERRIDE: v0.13.31
+      VERSION_OVERRIDE: v0.13.32
     steps:
       - name: Check out candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -50,25 +50,25 @@ jobs:
           set -euo pipefail
           CROSS=1 VERSION_OVERRIDE="$VERSION_OVERRIDE" make DAPPER_IMAGE="$DAPPER_IMAGE" ci
           make DAPPER_IMAGE="$DAPPER_IMAGE" IMAGE_NAME=pasturestack/node-agent \
-            TAG=v0.13.31 VERSION_OVERRIDE="$VERSION_OVERRIDE" package-image
-          test -s dist/artifacts/node-agent-0.13.31.tar.gz
-          test -s dist/artifacts/node-agent-0.13.31-windows-amd64.zip
+            TAG=v0.13.32 VERSION_OVERRIDE="$VERSION_OVERRIDE" package-image
+          test -s dist/artifacts/node-agent-0.13.32.tar.gz
+          test -s dist/artifacts/node-agent-0.13.32-windows-amd64.zip
           test "$(cat dist/image)" = "$RUNTIME_IMAGE"
-          gzip -t dist/artifacts/node-agent-0.13.31.tar.gz
-          bash scripts/verify-package dist/artifacts/node-agent-0.13.31.tar.gz
-          unzip -t dist/artifacts/node-agent-0.13.31-windows-amd64.zip
+          gzip -t dist/artifacts/node-agent-0.13.32.tar.gz
+          bash scripts/verify-package dist/artifacts/node-agent-0.13.32.tar.gz
+          unzip -t dist/artifacts/node-agent-0.13.32-windows-amd64.zip
           (
             cd dist/artifacts
-            sha256sum node-agent-0.13.31.tar.gz node-agent-0.13.31-windows-amd64.zip > SHA256SUMS
+            sha256sum node-agent-0.13.32.tar.gz node-agent-0.13.32-windows-amd64.zip > SHA256SUMS
             sha256sum -c SHA256SUMS
           )
-          sha256sum dist/artifacts/node-agent-0.13.31.tar.gz \
-            dist/artifacts/node-agent-0.13.31-windows-amd64.zip \
+          sha256sum dist/artifacts/node-agent-0.13.32.tar.gz \
+            dist/artifacts/node-agent-0.13.32-windows-amd64.zip \
             bin/node-agent bin/windows/amd64/node-agent.exe > evidence/product-artifacts.sha256
           docker image inspect "$RUNTIME_IMAGE" > evidence/runtime-image-inspect.json
           docker run --rm --entrypoint /usr/bin/node-agent "$RUNTIME_IMAGE" --version \
             > evidence/runtime-version.txt
-          grep -Fxq 'node-agent version v0.13.31' evidence/runtime-version.txt
+          grep -Fxq 'node-agent version v0.13.32' evidence/runtime-version.txt
 
       - name: Verify reproducible Linux binary
         shell: bash
@@ -118,8 +118,16 @@ jobs:
             --output /work/evidence/runtime-security.json "$RUNTIME_IMAGE"
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$PWD:/work" -w /work -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image \
-            --skip-db-update --offline-scan --scanners vuln,secret --format json \
-            --output /work/evidence/dapper-security.json "$DAPPER_IMAGE"
+            --skip-db-update --offline-scan --scanners vuln,secret --list-all-pkgs --format json \
+            --output /work/evidence/dapper-security-raw.json "$DAPPER_IMAGE"
+          docker run --rm --entrypoint python3 "$DAPPER_IMAGE" \
+            /opt/python-security/scripts/check-pip-vendor-slice.py \
+            > evidence/pip-vendor-proof.json
+          python3 scripts/pip-security/test-pip-vex.py
+          python3 scripts/pip-security/filter-pip-vendor-findings.py \
+            --raw evidence/dapper-security-raw.json --proof evidence/pip-vendor-proof.json \
+            --output evidence/dapper-security.json --vex evidence/pip-vendor.openvex.json \
+            --subject "$(docker image inspect --format '{{.Id}}' "$DAPPER_IMAGE")"
           docker run --rm --entrypoint sh "$DAPPER_IMAGE" -lc \
             "printf 'package\\tversion\\n'; dpkg-query -W -f='\${binary:Package}\\t\${Version}\\n' | LC_ALL=C sort" \
             > evidence/dapper-dpkg.tsv
@@ -243,13 +251,32 @@ jobs:
               print('{}_components={}'.format(scope, len(bom['components'])))
           PY
 
+      - name: Retain exact runtime for immutable release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/security-runtime
+          docker image inspect "$RUNTIME_IMAGE" > dist/security-runtime/images.json
+          docker save "$RUNTIME_IMAGE" | gzip -n > dist/security-runtime/images.tar.gz
+          cp evidence/runtime-security.json evidence/runtime.cdx.json dist/security-runtime/
+          cp dist/artifacts/node-agent-0.13.32.tar.gz dist/artifacts/node-agent-0.13.32-windows-amd64.zip dist/security-runtime/
+          printf '%s\n' "$GITHUB_SHA" > dist/security-runtime/source-revision.txt
+          (cd dist/security-runtime && sha256sum -- * > SHA256SUMS)
+      - name: Upload exact runtime release bytes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: security-runtime-${{ github.sha }}
+          path: dist/security-runtime/
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Retain exact scanned release packages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: node-agent-scanned-0.13.31
+          name: node-agent-scanned-0.13.32
           path: |
-            dist/artifacts/node-agent-0.13.31.tar.gz
-            dist/artifacts/node-agent-0.13.31-windows-amd64.zip
+            dist/artifacts/node-agent-0.13.32.tar.gz
+            dist/artifacts/node-agent-0.13.32-windows-amd64.zip
             dist/artifacts/SHA256SUMS
           if-no-files-found: error
           retention-days: 30
