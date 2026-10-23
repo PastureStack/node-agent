@@ -99,14 +99,15 @@ RUN git config --system --add safe.directory '*'
 ARG GO_VERSION=1.27.3
 ARG GO_SHA256_amd64=65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40
 ARG GO_SHA256_arm=d6f4e11dd7157030d7ac11c51c8f73201a2db932d593c3106b1da11cc32bfdf8
-ARG PIP_VERSION=26.2.2
 ARG SETUPTOOLS_VERSION=83.0.0
 ARG WHEEL_VERSION=0.47.0
 ARG TOX_VERSION=4.57.2
-ADD --checksum=sha256:fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70 https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl /opt/python-security/pip-26.2.2-py3-none-any.whl
+COPY scripts/pip-security /opt/python-security/scripts
+RUN python3 /opt/python-security/scripts/build-pip-overlay.py --work /tmp/pip-overlay-build --output /opt/python-security && \
+    rm -rf /tmp/pip-overlay-build
 ADD --checksum=sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b https://files.pythonhosted.org/packages/c4/51/29046e48f693c54e5b7412216d447a1d8362c9653148d98c02cdf65fa733/certifi-2026.10.19-py3-none-any.whl /opt/python-security/certifi-2026.10.19-py3-none-any.whl
 COPY scripts/install-python-security-tools /usr/local/bin/install-python-security-tools
-ENV VIRTUALENV_PIP=26.2.2 VIRTUALENV_EXTRA_SEARCH_DIR=/usr/share/python-wheels VIRTUALENV_NO_PERIODIC_UPDATE=1
+ENV VIRTUALENV_PIP=26.2.2+pasturestack.1 VIRTUALENV_EXTRA_SEARCH_DIR=/usr/share/python-wheels VIRTUALENV_NO_PERIODIC_UPDATE=1
 ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm=armv6l GOLANG_ARCH=GOLANG_ARCH_${ARCH} \
     GO_SHA256=GO_SHA256_${ARCH} \
     GOPATH=/go PATH=/opt/tox/bin:/go/bin:/usr/local/go/bin:${PATH} SHELL=/bin/bash \
@@ -119,7 +120,6 @@ RUN curl -fsSL -o /tmp/go.tgz "https://go.dev/dl/go${GO_VERSION}.linux-${!GOLANG
     bash /usr/local/bin/install-python-security-tools && \
     python3 -m venv /opt/tox && \
     /opt/tox/bin/pip install --no-cache-dir --upgrade \
-        "pip==${PIP_VERSION}" \
         "setuptools==${SETUPTOOLS_VERSION}" \
         "wheel==${WHEEL_VERSION}" \
         "tox==${TOX_VERSION}" && \

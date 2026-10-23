@@ -118,8 +118,17 @@ jobs:
             --output /work/evidence/runtime-security.json "$RUNTIME_IMAGE"
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$PWD:/work" -w /work -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image \
-            --skip-db-update --offline-scan --scanners vuln,secret --format json \
-            --output /work/evidence/dapper-security.json "$DAPPER_IMAGE"
+            --skip-db-update --offline-scan --scanners vuln,secret --list-all-pkgs --format json \
+            --output /work/evidence/dapper-security-raw.json "$DAPPER_IMAGE"
+          docker run --rm --entrypoint python3 "$DAPPER_IMAGE" \
+            /opt/python-security/scripts/check-pip-vendor-slice.py \
+            --wheel /opt/python-security/pip-26.2.2+pasturestack.1-py3-none-any.whl \
+            > evidence/pip-vendor-proof.json
+          python3 scripts/pip-security/test-pip-vex.py
+          python3 scripts/pip-security/filter-pip-vendor-findings.py \
+            --raw evidence/dapper-security-raw.json --proof evidence/pip-vendor-proof.json \
+            --output evidence/dapper-security.json --vex evidence/pip-vendor.openvex.json \
+            --subject "$(docker image inspect --format '{{.Id}}' "$DAPPER_IMAGE")"
           docker run --rm --entrypoint sh "$DAPPER_IMAGE" -lc \
             "printf 'package\\tversion\\n'; dpkg-query -W -f='\${binary:Package}\\t\${Version}\\n' | LC_ALL=C sort" \
             > evidence/dapper-dpkg.tsv
