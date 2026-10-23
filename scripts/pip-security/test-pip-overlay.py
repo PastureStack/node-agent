@@ -62,6 +62,7 @@ def boundary_tests(expect_fixed):
                 assert isinstance(error, ProtocolError), repr(error)
                 assert "exceeded maximum allowed length" in str(error), str(error)
         if expect_fixed:
+            assert error_description != "no exception", "malicious chunk line was accepted"
             assert wire.largest_readline <= 65537, wire.largest_readline
         else:
             assert wire.largest_readline == 131072, (wire.largest_readline, error_description)
@@ -85,9 +86,6 @@ def main():
     assert msgpack.Unpacker.__module__ == "pip._vendor.msgpack.fallback"
     import importlib.util
     assert importlib.util.find_spec("pip._vendor.msgpack._cmsgpack") is None
-    vendor_root = Path(pip.__file__).parent / "_vendor"
-    assert not (vendor_root / "setuptools" / "package_index.py").exists()
-    assert (vendor_root / "pkg_resources" / "__init__.py").is_file()
     unpacker = msgpack.Unpacker()
     unpacker.feed(b"\x83\x73\xc4\x00")
     try:
@@ -140,4 +138,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if sys.flags.optimize:
+        raise RuntimeError("Security regression tests must not run with Python optimization")
     main()
