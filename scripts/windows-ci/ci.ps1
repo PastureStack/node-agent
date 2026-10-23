@@ -1,4 +1,4 @@
-﻿Write-Host "Running CI"
+Write-Host "Running CI"
 
 cd $PSScriptRoot
 
