@@ -64,6 +64,7 @@ tar -xzf "$work/runc.tgz" --strip-components=1 -C "$work/runc"
 (
     cd "$work/runc"
     go get github.com/cilium/ebpf@v0.22.0 github.com/moby/sys/user@v0.4.1 \
+        github.com/opencontainers/cgroups@v0.1.0 \
         golang.org/x/net@v0.60.0 golang.org/x/sys@v0.48.0
     go mod download
     CGO_ENABLED=1 go list -tags 'seccomp urfave_cli_no_docs' -deps . > "$proof/runc-package-graph.txt"
