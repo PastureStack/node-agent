@@ -122,7 +122,6 @@ jobs:
             --output /work/evidence/dapper-security-raw.json "$DAPPER_IMAGE"
           docker run --rm --entrypoint python3 "$DAPPER_IMAGE" \
             /opt/python-security/scripts/check-pip-vendor-slice.py \
-            --wheel /opt/python-security/pip-26.2.2+pasturestack.1-py3-none-any.whl \
             > evidence/pip-vendor-proof.json
           python3 scripts/pip-security/test-pip-vex.py
           python3 scripts/pip-security/filter-pip-vendor-findings.py \
