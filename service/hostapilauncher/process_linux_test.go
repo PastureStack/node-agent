@@ -19,7 +19,7 @@ func TestProducerIsBoundToLinuxParentDeathAndRejectsUnsafeExecutable(t *testing.
 	}
 	directory := t.TempDir()
 	file := filepath.Join(directory, "host-api")
-	if err := os.WriteFile(file, []byte("#!/bin/sh\nprintf '0.38.7\\n'\n"), 0755); err != nil {
+	if err := os.WriteFile(file, []byte("#!/bin/sh\nprintf '0.38.8\\n'\n"), 0755); err != nil {
 		t.Fatal(err)
 	}
 	if err := validateProducer(context.Background(), file, os.Environ()); err != nil {
