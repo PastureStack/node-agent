@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# Build-only tools: keep containerd 2.2 and runc 1.4 compatibility branches.
+set -euo pipefail
+test "$(go env GOVERSION)" = go1.27.3
+test "$HOST_ARCH" = amd64
+work=$(mktemp -d /tmp/node-container-tools.XXXXXX)
+trap 'rm -rf -- "$work"' EXIT
+export GOTOOLCHAIN=local GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org
+export GOFLAGS=-mod=mod GOCACHE="$work/cache" GOMODCACHE="$work/modules"
+proof=/licenses/container-tools
+mkdir -p "$proof" "$work/containerd" "$work/runc"
+fetch() {
+    curl --fail --silent --show-error --location --retry 5 "$1" -o "$2"
+    printf '%s  %s\n' "$3" "$2" | sha256sum -c -
+}
+fetch https://raw.githubusercontent.com/moby/moby/0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c/LICENSE \
+    "$proof/docker-LICENSE" 7c87873291f289713ac5df48b1f2010eb6963752bbd6b530416ab99fc37914a8
+fetch https://raw.githubusercontent.com/moby/moby/0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c/NOTICE \
+    "$proof/moby-NOTICE" a249c4197359eee43031d16cecb172326f92ee7b6701af99dfe5c3e5b3d5eca9
+fetch https://raw.githubusercontent.com/docker/cli/a82e528901260c8df6073311379eac65f92db204/NOTICE \
+    "$proof/docker-cli-NOTICE" a8c869fbda819afb8d80e0ac19bac52e766bc6c19cb38cf94f52d64c4be2aab6
+fetch https://download.docker.com/linux/static/stable/x86_64/docker-29.9.2.tgz \
+    "$work/docker.tgz" 9ac225999fd5e863f7694c728ef23d480616b1e5639328fa309befd4243d69eb
+tar -xzf "$work/docker.tgz" -C "$work" docker/docker docker/dockerd docker/docker-proxy docker/docker-init
+for tool in docker dockerd docker-proxy docker-init; do
+    install -m 0755 "$work/docker/$tool" "/usr/bin/$tool"
+done
+echo '3a6132d4d99c1437e3422599f802207a3def9ba4de00ec1004a8e40d2740b9b0  /usr/bin/dockerd' | sha256sum -c -
+echo '6c71cfe71faff949a602946a4df4799b563232e79d0b8b6fd343d0ef081c9621  /usr/bin/docker' | sha256sum -c -
+fetch https://codeload.github.com/containerd/containerd/tar.gz/991ca6a8ca58b47346a42093210099e090bc6c1f \
+    "$work/containerd.tgz" 0962ede134cea36107b0cec0ce152bcf47f1bfbd8945bc3b839a2456a389b077
+fetch https://codeload.github.com/opencontainers/runc/tar.gz/bb14dabeb7185bb72c8c86735d090dcb20f36587 \
+    "$work/runc.tgz" 0128f07fa8bd2ce25d3debf7b52961a2cdc7fbd5fa2da6e76f460d280641fb1b
+tar -xzf "$work/containerd.tgz" --strip-components=1 -C "$work/containerd"
+tar -xzf "$work/runc.tgz" --strip-components=1 -C "$work/runc"
+(
+    cd "$work/containerd"
+    go get github.com/cilium/ebpf@v0.22.0 github.com/klauspost/compress@v1.18.7 \
+        github.com/containerd/imgcrypt/v2@v2.0.3 \
+        github.com/moby/sys/user@v0.4.1 golang.org/x/net@v0.60.0 \
+        golang.org/x/crypto@v0.57.0 golang.org/x/mod@v0.41.0 golang.org/x/text@v0.42.0 \
+        google.golang.org/grpc@v1.83.2 \
+        go.opentelemetry.io/otel@v1.45.0 go.opentelemetry.io/otel/sdk@v1.45.0 \
+        go.opentelemetry.io/otel/exporters/otlp/otlptrace@v1.45.0 \
+        go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc@v1.45.0 \
+        go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.45.0
+    go mod download
+    export CGO_ENABLED=0
+    tags='no_btrfs netgo osusergo urfave_cli_no_docs'
+    for tool in containerd ctr containerd-shim-runc-v2; do
+        go list -tags "$tags" -deps "./cmd/$tool" > "$proof/$tool-package-graph.txt"
+    done
+    # Keep encrypted-image PGP support through the maintained implementation.
+    grep -Fxq 'github.com/ProtonMail/go-crypto/openpgp' "$proof/containerd-package-graph.txt"
+    go test github.com/containers/ocicrypt/keywrap/pgp
+    go mod verify
+    export GOPROXY=off GOSUMDB=off
+    for tool in containerd ctr containerd-shim-runc-v2; do
+        go list -tags "$tags" -deps "./cmd/$tool" >/dev/null
+        go build -trimpath -buildvcs=false -tags "$tags" \
+            -ldflags '-s -w -X github.com/containerd/containerd/v2/version.Version=v2.2.10 -X github.com/containerd/containerd/v2/version.Revision=991ca6a8ca58b47346a42093210099e090bc6c1f' \
+            -o "/usr/bin/$tool" "./cmd/$tool"
+    done
+    cp go.mod "$proof/containerd.go.mod"
+    cp go.sum "$proof/containerd.go.sum"
+    cp LICENSE "$proof/containerd-LICENSE"
+)
+(
+    cd "$work/runc"
+    go get github.com/cilium/ebpf@v0.22.0 github.com/moby/sys/user@v0.4.1 \
+        github.com/opencontainers/cgroups@v0.1.0 \
+        golang.org/x/net@v0.60.0 golang.org/x/sys@v0.48.0
+    go mod download
+    CGO_ENABLED=1 go list -tags 'seccomp urfave_cli_no_docs' -deps . > "$proof/runc-package-graph.txt"
+    go mod verify
+    export GOPROXY=off GOSUMDB=off
+    make runc COMMIT=bb14dabeb7185bb72c8c86735d090dcb20f36587
+    install -m 0755 runc /usr/bin/runc
+    cp go.mod "$proof/runc.go.mod"
+    cp go.sum "$proof/runc.go.sum"
+    cp LICENSE "$proof/runc-LICENSE"
+)
+for tool in docker dockerd docker-proxy containerd containerd-shim-runc-v2 ctr runc; do
+    go version -m "/usr/bin/$tool" > "$proof/$tool-buildinfo.txt"
+    sha256sum "/usr/bin/$tool"
+done > "$proof/binaries.sha256"
+if grep -E '^golang.org/x/crypto/openpgp($|/)' "$proof"/*-package-graph.txt; then
+    echo 'Unexpected OpenPGP dependency in rebuilt container tools' >&2
+    exit 1
+fi
+docker --version | grep -F '29.9.2'
+dockerd --version | grep -F '29.9.2'
+containerd --version | grep -F 'v2.2.10'
+runc --version | grep -F '1.4.3'

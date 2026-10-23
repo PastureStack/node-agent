@@ -67,3 +67,43 @@ Maintained Go builds select the patched Go 1.27.3 compiler without raising the e
 # Python installer security rebuild
 
 The disposable Dapper image rebuilds pip `26.2.2+pasturestack.1` from checksum-pinned official inputs using upstream vendoring and the original urllib3 patches. Only urllib3 changes to released `2.8.0`; this is a local security rebuild, not a new official PyPA release. The expected wheel SHA-256 is `be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a`. Ubuntu's Python ABI is retained. The image tests live pip, available ensurepip/new-venv seeds, virtualenv, streaming limits, and trusted/untrusted TLS. See `scripts/pip-security/README.md` for source and license evidence.
+
+## Full-severity security rebuild candidate
+
+The next compatible release candidate is **v0.13.33**, not yet published. It updates only already-installed Ubuntu 26.04 packages using the official signed 2026-10-23 snapshot and obtains the trust bundle from the SHA-pinned official CA package. Host ID, persistent agent state, startup arguments and the required host-api v0.38.8 remain unchanged.
+
+The full-severity runtime gate rejects every finding with an official fix,
+including LOW, MEDIUM and UNKNOWN. Only exact reviewed LOW/MEDIUM no-fix entries
+may pass. Existing v0.13.32 remains published for provenance, but is not the fully
+patched candidate.
+### Complete build-environment gate
+
+The Dapper scan retains all severities and requires nonempty package analysis for the expected Go binaries. Any available fixed version fails, including Low, Medium and Unknown findings. Other Low/Medium findings require an exact package/version/PURL entry backed by the official vendor tracker. The pinned userspace kernel-header exception additionally requires the reviewed CVE set, actual header payload paths, and absence of kernel images/modules; it never permits an available fix. Unknown module findings require the separately verified exact source package graph, not a generic severity exemption.
+
+The disposable builder uses official Docker 29.9.2 CLI/daemon bytes, with its
+supported Go 1.26.10 compiler, rather than Ubuntu's outdated embedded Go tools.
+Containerd stays on the 2.2 compatibility branch at 2.2.10 and runc stays on 1.4
+at 1.4.3; both are rebuilt from SHA-pinned released sources using Go 1.27.3 and
+released security-fixed dependencies. Runc retains seccomp. Containerd
+uses released imgcrypt 2.0.3 / ocicrypt 1.3.2 to retain encrypted-image PGP
+support through the maintained ProtonMail implementation; CI tests that wrapper
+and requires the deprecated x/crypto OpenPGP package to be absent.
+omits the unused Btrfs snapshotter; the actual test daemon uses overlay2/vfs.
+These are builder-only changes, not a host Docker upgrade or a new deployment
+recipe. CI exercises the real inner daemon and package-image build, independently
+scans all seven container-tool ELF files, and fails if any expected analysis is
+missing. Complete raw image and standalone ELF reports are retained.
+
+The daemon's reachable distribution metadata API retains CVE-2026-85747 as an
+exact reviewed Medium no-fix finding: the official advisory has no released
+docker/distribution v2 fix. The v3.1.2 fix is a different module major; neither an
+unpublished v2 commit nor the CLI's digest mitigation is substituted. Future
+official fixed-version findings remain blocking. The exact official daemon's
+`golang.org/x/crypto/openpgp` absence is separately checked against its SHA and
+nonempty crypto symbol control; it does not exempt the distribution finding.
+The retained 2,078-package daemon source graph is from official commit
+`0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c`, Linux/amd64, CGO=1 and official tags
+`netgo,osusergo,static_build,nri_no_wasm,journald`, resolved offline from the
+official vendor tree using Go 1.27.3. That analysis compiler is not the official
+binary's Go 1.26.10 compiler. The graph includes ProtonMail's distinct OpenPGP
+implementation; no claim is made that all OpenPGP code is absent.

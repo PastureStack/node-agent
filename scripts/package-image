@@ -27,6 +27,14 @@ trap cleanup EXIT
 
 cp package/Dockerfile "$tmpdir/Dockerfile"
 cp bin/node-agent "$tmpdir/node-agent"
+cp package/ubuntu-security-packages.lock "$tmpdir/"
+cp scripts/install-ubuntu-security-updates "$tmpdir/"
+curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+    --retry 2 --connect-timeout 10 --max-time 120 \
+    -o "$tmpdir/ca-certificates.deb" \
+    https://archive.ubuntu.com/ubuntu/pool/main/c/ca-certificates/ca-certificates_20260816ubuntu0.26.04.1_all.deb
+printf '%s  %s\n' 5b6326f1932cfd7be57130561dc78192f09ed9f58bfbe6606ed0c50510c3b6cd \
+    "$tmpdir/ca-certificates.deb" | sha256sum --check
 
 curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
     --retry 2 --connect-timeout 10 --max-time 120 \
@@ -41,7 +49,7 @@ curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
 printf '%s  %s\n' 51cf418571059831096abd40e0bd5debaa1ae48a6f8d87d9e4e5f7f12aa4db52 \
     "$tmpdir/openssl-provider-legacy.deb" | sha256sum --check
 
-DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-0}" docker build \
+docker build \
     --network="${DOCKER_BUILD_NETWORK:-default}" \
     --build-arg PASTURESTACK_IMAGE_VERSION="${tag}" \
     -t "${image_name}:${tag}" \
