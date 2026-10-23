@@ -36,6 +36,7 @@ tar -xzf "$work/runc.tgz" --strip-components=1 -C "$work/runc"
 (
     cd "$work/containerd"
     go get github.com/cilium/ebpf@v0.22.0 github.com/klauspost/compress@v1.18.7 \
+        github.com/containerd/imgcrypt/v2@v2.0.3 \
         github.com/moby/sys/user@v0.4.1 golang.org/x/net@v0.60.0 \
         golang.org/x/crypto@v0.57.0 golang.org/x/mod@v0.41.0 golang.org/x/text@v0.42.0 \
         google.golang.org/grpc@v1.83.2 \
@@ -49,6 +50,9 @@ tar -xzf "$work/runc.tgz" --strip-components=1 -C "$work/runc"
     for tool in containerd ctr containerd-shim-runc-v2; do
         go list -tags "$tags" -deps "./cmd/$tool" > "$proof/$tool-package-graph.txt"
     done
+    # Keep encrypted-image PGP support through the maintained implementation.
+    grep -Fxq 'github.com/ProtonMail/go-crypto/openpgp' "$proof/containerd-package-graph.txt"
+    go test github.com/containers/ocicrypt/keywrap/pgp
     go mod verify
     export GOPROXY=off GOSUMDB=off
     for tool in containerd ctr containerd-shim-runc-v2; do

@@ -84,7 +84,10 @@ The disposable builder uses official Docker 29.9.2 CLI/daemon bytes, with its
 supported Go 1.26.10 compiler, rather than Ubuntu's outdated embedded Go tools.
 Containerd stays on the 2.2 compatibility branch at 2.2.10 and runc stays on 1.4
 at 1.4.3; both are rebuilt from SHA-pinned released sources using Go 1.27.3 and
-released security-fixed dependencies. Runc retains seccomp. Containerd's build
+released security-fixed dependencies. Runc retains seccomp. Containerd
+uses released imgcrypt 2.0.3 / ocicrypt 1.3.2 to retain encrypted-image PGP
+support through the maintained ProtonMail implementation; CI tests that wrapper
+and requires the deprecated x/crypto OpenPGP package to be absent.
 omits the unused Btrfs snapshotter; the actual test daemon uses overlay2/vfs.
 These are builder-only changes, not a host Docker upgrade or a new deployment
 recipe. CI exercises the real inner daemon and package-image build, independently
