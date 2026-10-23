@@ -251,6 +251,25 @@ jobs:
               print('{}_components={}'.format(scope, len(bom['components'])))
           PY
 
+      - name: Retain exact runtime for immutable release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/security-runtime
+          docker image inspect "$RUNTIME_IMAGE" > dist/security-runtime/images.json
+          docker save "$RUNTIME_IMAGE" | gzip -n > dist/security-runtime/images.tar.gz
+          cp evidence/runtime-security.json evidence/runtime.cdx.json dist/security-runtime/
+          cp dist/artifacts/node-agent-0.13.32.tar.gz dist/artifacts/node-agent-0.13.32-windows-amd64.zip dist/security-runtime/
+          printf '%s\n' "$GITHUB_SHA" > dist/security-runtime/source-revision.txt
+          (cd dist/security-runtime && sha256sum -- * > SHA256SUMS)
+      - name: Upload exact runtime release bytes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: security-runtime-${{ github.sha }}
+          path: dist/security-runtime/
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Retain exact scanned release packages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
