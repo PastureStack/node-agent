@@ -42,7 +42,14 @@ jobs:
             .github/workflows/codeql-verification.yml \
             .github/workflows/security-release-gate.yml \
             security/dapper.openvex.json \
+            security/buildx.openvex.json toolchain/build-buildx \
+            .github/scripts/scan-dapper-container-binaries.sh \
+            .github/scripts/check_buildx_code_absence.py \
+            .github/scripts/test_buildx_code_absence.py \
             > evidence/source-locks.sha256
+
+      - name: Validate Buildx source applicability guards
+        run: python3 -B .github/scripts/test_buildx_code_absence.py
 
       - name: Run complete CI and package runtime image
         shell: bash
@@ -129,7 +136,7 @@ jobs:
           docker run --rm --entrypoint dockerd "$DAPPER_IMAGE" --version > evidence/dockerd-version.txt
           python3 scripts/pip-security/test-pip-vex.py
           python3 scripts/pip-security/filter-pip-vendor-findings.py \
-            --raw evidence/dapper-security-raw.json --proof evidence/pip-vendor-proof.json \
+            --raw evidence/dapper-security-buildx.json --proof evidence/pip-vendor-proof.json \
             --output evidence/dapper-security.json --vex evidence/pip-vendor.openvex.json \
             --subject "$(docker image inspect --format '{{.Id}}' "$DAPPER_IMAGE")"
           docker run --rm --entrypoint sh "$DAPPER_IMAGE" -lc \

@@ -110,6 +110,7 @@ RUN python3 /opt/python-security/scripts/build-pip-overlay.py --work /tmp/pip-ov
 ADD --checksum=sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b https://files.pythonhosted.org/packages/c4/51/29046e48f693c54e5b7412216d447a1d8362c9653148d98c02cdf65fa733/certifi-2026.10.19-py3-none-any.whl /opt/python-security/certifi-2026.10.19-py3-none-any.whl
 COPY scripts/install-python-security-tools /usr/local/bin/install-python-security-tools
 COPY scripts/install-dapper-container-tools /usr/local/bin/install-dapper-container-tools
+COPY toolchain/build-buildx /usr/local/libexec/pasturestack/build-buildx
 ENV VIRTUALENV_PIP=26.2.2+pasturestack.1 VIRTUALENV_EXTRA_SEARCH_DIR=/usr/share/python-wheels VIRTUALENV_NO_PERIODIC_UPDATE=1
 ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm=armv6l GOLANG_ARCH=GOLANG_ARCH_${ARCH} \
     GO_SHA256=GO_SHA256_${ARCH} \
@@ -152,6 +153,8 @@ ENV DAPPER_OUTPUT="bin dist"
 ENV DAPPER_ENV="TAG REPO CROSS VERSION_OVERRIDE NO_TEST TEST_BUSYBOX_IMAGE TEST_BUSYBOX_ALIAS"
 ENV DAPPER_RUN_ARGS="--privileged --cgroupns=host"
 ENV HOME=/tmp GOCACHE=/tmp/go-build-cache GOMODCACHE=/tmp/go-mod-cache
+RUN bash /usr/local/libexec/pasturestack/build-buildx
+
 WORKDIR ${DAPPER_SOURCE}
 
 VOLUME "/var/lib/docker"
