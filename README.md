@@ -1,8 +1,8 @@
 # PastureStack Node Agent
 
-Linux candidate **`v0.13.34`** integrates shared Ubuntu 26.04 security backports for already-installed packages while preserving the selected coreutils provider. It is unpublished; the last published Linux release is [v0.13.33](https://github.com/PastureStack/node-agent/releases/tag/v0.13.33).
+Linux runtime **`v0.13.34`** integrates shared Ubuntu 26.04 security backports for already-installed packages while preserving the selected coreutils provider.
 
-Build and image examples below target the candidate. Publication requires completed bundle provenance and the normal final-image release gates. The image retains bundle manifests, source inputs and install/verify receipts under `/usr/share/pasturestack/security/ubuntu-backports/`.
+The image retains bundle manifests, source inputs and installation receipts under `/usr/share/pasturestack/security/ubuntu-backports/`.
 
 Node Agent receives control-platform events on compute nodes, executes the corresponding container, storage, host, and configuration operations, and publishes compatible replies.
 
@@ -31,8 +31,7 @@ make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.34
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
 
-The source recipe targets `0.13.34`. Source preparation is not publication
-proof: use the [official releases](https://github.com/PastureStack/node-agent/releases)
+The recipe packages version `0.13.34`. Verify published assets using use the [official releases](https://github.com/PastureStack/node-agent/releases)
 and their SHA-256 checksums to verify published packages. Published tags and assets
 remain immutable; later documentation commits do not change their producer identity.
 The outer bootstrap image version and the Go package version are separate identities.
@@ -43,14 +42,14 @@ client 0.5, gopsutil v4.26, mapstructure v2.5, netlink v1.3, and netns v0.0.5.
 The retired AWS SDK v1, Aliyungo, root Docker module, GOPATH/Godeps, and Trash
 dependency paths are not part of the build.
 
-`VERSION_OVERRIDE=v0.13.34 make package` produces the candidate Linux asset `node-agent-0.13.34.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
+`VERSION_OVERRIDE=v0.13.34 make package` produces the Linux asset `node-agent-0.13.34.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
 
 Upgrade existing Linux hosts through that established configcontent/pyagent
 sequence, installing the compatible Host API package before Node. Keep the
 existing platform-home data volume and Host ID; do not register a replacement
 host or create a replacement state volume. Read the installed Node version with
 `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/node-agent/node-agent --version`;
-after the candidate is published and installed, the expected result is
+after installing this Linux version, the expected result is
 `node-agent version v0.13.34`.
 
 On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.8` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
