@@ -48,12 +48,17 @@ jobs:
             .github/scripts/test_buildx_code_absence.py \
             .github/scripts/join_buildx_native_vex.py \
             .github/scripts/test_join_buildx_native_vex.py \
+            .github/scripts/check_buildx_additional_scopes.py \
+            .github/scripts/test_buildx_additional_scopes.py security/buildx-source-scopes/*.json \
+            scripts/pip-security/check-pip-vendor-slice.py scripts/pip-security/filter-pip-vendor-findings.py \
+            scripts/pip-security/test-pip-vex.py tests/requirements.lock tests/requirements.txt \
             > evidence/source-locks.sha256
 
       - name: Validate Buildx source applicability guards
         run: |
           python3 -B .github/scripts/test_buildx_code_absence.py
           python3 -B .github/scripts/test_join_buildx_native_vex.py
+          python3 -B .github/scripts/test_buildx_additional_scopes.py
 
       - name: Run complete CI and package runtime image
         shell: bash
@@ -134,13 +139,27 @@ jobs:
             --skip-db-update --offline-scan --scanners vuln,secret --list-all-pkgs --format json \
             --output /work/evidence/dapper-security-image.json "$DAPPER_IMAGE"
           bash .github/scripts/scan-dapper-container-binaries.sh "$DAPPER_IMAGE" "$TRIVY_IMAGE" "$cache"
+          jq -n --slurpfile source evidence/buildx-source-input.json \
+            --slurpfile baseGuard evidence/buildx-code-absence.json \
+            --rawfile pluginFix security/buildx-source-scopes/CVE-2026-33997-official-commit.json \
+            --rawfile plugin security/buildx-source-scopes/GO-2026-4883.json \
+            --rawfile copy security/buildx-source-scopes/GO-2026-5668.json \
+            --rawfile openpgp security/buildx-source-scopes/GO-2026-5932.json \
+            '{source:$source[0],baseGuard:$baseGuard[0],pluginFix:$pluginFix,osv:{"GO-2026-4883":$plugin,"GO-2026-5668":$copy,"GO-2026-5932":$openpgp}}' \
+            > evidence/buildx-additional-input.json
+          python3 -B .github/scripts/check_buildx_additional_scopes.py \
+            < evidence/buildx-additional-input.json > evidence/buildx-additional-qualification.json
           docker run --rm --entrypoint python3 "$DAPPER_IMAGE" \
             /opt/python-security/scripts/check-pip-vendor-slice.py \
             > evidence/pip-vendor-proof.json
           docker run --rm --entrypoint dockerd "$DAPPER_IMAGE" --version > evidence/dockerd-version.txt
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD:/work" -w /work -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image \
+            --skip-db-update --offline-scan --format cyclonedx \
+            --output /work/evidence/dapper.cdx.json "$DAPPER_IMAGE"
           python3 scripts/pip-security/test-pip-vex.py
           python3 scripts/pip-security/filter-pip-vendor-findings.py \
-            --raw evidence/dapper-security-buildx.json --proof evidence/pip-vendor-proof.json \
+            --raw evidence/dapper-security-buildx.json --proof evidence/pip-vendor-proof.json --sbom evidence/dapper.cdx.json \
             --output evidence/dapper-security.json --vex evidence/pip-vendor.openvex.json \
             --subject "$(docker image inspect --format '{{.Id}}' "$DAPPER_IMAGE")"
           docker run --rm --entrypoint sh "$DAPPER_IMAGE" -lc \
@@ -224,10 +243,6 @@ jobs:
             --skip-db-update --offline-scan --scanners vuln,secret --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
             --vex /work/evidence/ubuntu-backports/openvex.json --format json \
             --output /work/evidence/runtime-security.effective.json "$RUNTIME_IMAGE"
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-            -v "$PWD:/work" -w /work -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image \
-            --skip-db-update --offline-scan --format cyclonedx \
-            --output /work/evidence/dapper.cdx.json "$DAPPER_IMAGE"
 
       - name: Enforce zero applicable Critical, High, or secrets
         shell: bash

@@ -66,7 +66,7 @@ PY
 buildx_sha="$(sha256sum "$root/usr/local/lib/docker/cli-plugins/docker-buildx")"
 buildx_sha="${buildx_sha%% *}"
 qualify_buildx_raw() {
-local report=$1 output=$2
+local report=$1 output=$2 input=$3
 jq -n \
   --rawfile binding evidence/BUILDX-SOURCE.tsv \
   --rawfile packages evidence/BUILDX-PACKAGES.txt \
@@ -84,9 +84,9 @@ jq -n \
   --slurpfile vex security/buildx.openvex.json \
   --arg binarySha256 "$buildx_sha" \
   '{binding:$binding,packages:$packages,files:$files,modulesBefore:$modulesBefore,modulesAfter:$modulesAfter,buildInfo:$buildInfo,version:$version,sourceCheck:$sourceCheck,osvInputs:{"GO-2026-5617":$daemon42306,"GO-2026-5746":$daemon41567,"GO-2026-6253":$archive17106,"GO-2026-6611":$net78669},raw:$raw,vex:$vex[0],binarySha256:$binarySha256}' \
-  | python3 -B .github/scripts/check_buildx_code_absence.py > "$output"
+  | tee "$input" | python3 -B .github/scripts/check_buildx_code_absence.py > "$output"
 }
-qualify_buildx_raw evidence/dapper-security-raw.json evidence/buildx-code-absence.json
+qualify_buildx_raw evidence/dapper-security-raw.json evidence/buildx-code-absence.json evidence/buildx-source-input.json
 
 # Native VEX runs on only the same source-qualified ELF. Re-scanning the whole
 # image can choose another duplicate Python package layer; full raw stays intact.
@@ -99,7 +99,7 @@ docker run --rm --network none -v "$buildx_root:/scan:ro" -v "$PWD/evidence:/evi
     -v "$cache:/root/.cache/trivy" "$scanner" rootfs --skip-db-update --offline-scan \
     --scanners vuln,secret --list-all-pkgs --format json \
     --output /evidence/buildx-isolated-raw.json /scan
-qualify_buildx_raw evidence/buildx-isolated-raw.json evidence/buildx-isolated-code-absence.json
+qualify_buildx_raw evidence/buildx-isolated-raw.json evidence/buildx-isolated-code-absence.json /dev/null
 docker run --rm --network none -v "$buildx_root:/scan:ro" -v "$PWD/evidence:/evidence" \
     -v "$PWD/security:/vex:ro" -v "$cache:/root/.cache/trivy" "$scanner" rootfs \
     --skip-db-update --offline-scan --scanners vuln,secret --list-all-pkgs \
