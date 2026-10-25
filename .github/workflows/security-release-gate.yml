@@ -46,10 +46,14 @@ jobs:
             .github/scripts/scan-dapper-container-binaries.sh \
             .github/scripts/check_buildx_code_absence.py \
             .github/scripts/test_buildx_code_absence.py \
+            .github/scripts/join_buildx_native_vex.py \
+            .github/scripts/test_join_buildx_native_vex.py \
             > evidence/source-locks.sha256
 
       - name: Validate Buildx source applicability guards
-        run: python3 -B .github/scripts/test_buildx_code_absence.py
+        run: |
+          python3 -B .github/scripts/test_buildx_code_absence.py
+          python3 -B .github/scripts/test_join_buildx_native_vex.py
 
       - name: Run complete CI and package runtime image
         shell: bash
