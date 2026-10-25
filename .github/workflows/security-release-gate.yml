@@ -19,9 +19,9 @@ jobs:
     timeout-minutes: 120
     env:
       DAPPER_IMAGE: pasturestack/node-agent-dapper:${{ github.sha }}
-      RUNTIME_IMAGE: pasturestack/node-agent:v0.13.33
+      RUNTIME_IMAGE: pasturestack/node-agent:v0.13.34
       TRIVY_IMAGE: aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
-      VERSION_OVERRIDE: v0.13.33
+      VERSION_OVERRIDE: v0.13.34
     steps:
       - name: Check out candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,7 +42,23 @@ jobs:
             .github/workflows/codeql-verification.yml \
             .github/workflows/security-release-gate.yml \
             security/dapper.openvex.json \
+            security/buildx.openvex.json toolchain/build-buildx \
+            .github/scripts/scan-dapper-container-binaries.sh \
+            .github/scripts/check_buildx_code_absence.py \
+            .github/scripts/test_buildx_code_absence.py \
+            .github/scripts/join_buildx_native_vex.py \
+            .github/scripts/test_join_buildx_native_vex.py \
+            .github/scripts/check_buildx_additional_scopes.py \
+            .github/scripts/test_buildx_additional_scopes.py security/buildx-source-scopes/*.json \
+            scripts/pip-security/check-pip-vendor-slice.py scripts/pip-security/filter-pip-vendor-findings.py \
+            scripts/pip-security/test-pip-vex.py tests/requirements.lock tests/requirements.txt \
             > evidence/source-locks.sha256
+
+      - name: Validate Buildx source applicability guards
+        run: |
+          python3 -B .github/scripts/test_buildx_code_absence.py
+          python3 -B .github/scripts/test_join_buildx_native_vex.py
+          python3 -B .github/scripts/test_buildx_additional_scopes.py
 
       - name: Run complete CI and package runtime image
         shell: bash
@@ -50,25 +66,25 @@ jobs:
           set -euo pipefail
           CROSS=1 VERSION_OVERRIDE="$VERSION_OVERRIDE" make DAPPER_IMAGE="$DAPPER_IMAGE" ci
           make DAPPER_IMAGE="$DAPPER_IMAGE" IMAGE_NAME=pasturestack/node-agent \
-            TAG=v0.13.33 VERSION_OVERRIDE="$VERSION_OVERRIDE" package-image
-          test -s dist/artifacts/node-agent-0.13.33.tar.gz
-          test -s dist/artifacts/node-agent-0.13.33-windows-amd64.zip
+            TAG=v0.13.34 VERSION_OVERRIDE="$VERSION_OVERRIDE" package-image
+          test -s dist/artifacts/node-agent-0.13.34.tar.gz
+          test -s dist/artifacts/node-agent-0.13.34-windows-amd64.zip
           test "$(cat dist/image)" = "$RUNTIME_IMAGE"
-          gzip -t dist/artifacts/node-agent-0.13.33.tar.gz
-          bash scripts/verify-package dist/artifacts/node-agent-0.13.33.tar.gz
-          unzip -t dist/artifacts/node-agent-0.13.33-windows-amd64.zip
+          gzip -t dist/artifacts/node-agent-0.13.34.tar.gz
+          bash scripts/verify-package dist/artifacts/node-agent-0.13.34.tar.gz
+          unzip -t dist/artifacts/node-agent-0.13.34-windows-amd64.zip
           (
             cd dist/artifacts
-            sha256sum node-agent-0.13.33.tar.gz node-agent-0.13.33-windows-amd64.zip > SHA256SUMS
+            sha256sum node-agent-0.13.34.tar.gz node-agent-0.13.34-windows-amd64.zip > SHA256SUMS
             sha256sum -c SHA256SUMS
           )
-          sha256sum dist/artifacts/node-agent-0.13.33.tar.gz \
-            dist/artifacts/node-agent-0.13.33-windows-amd64.zip \
+          sha256sum dist/artifacts/node-agent-0.13.34.tar.gz \
+            dist/artifacts/node-agent-0.13.34-windows-amd64.zip \
             bin/node-agent bin/windows/amd64/node-agent.exe > evidence/product-artifacts.sha256
           docker image inspect "$RUNTIME_IMAGE" > evidence/runtime-image-inspect.json
           docker run --rm --entrypoint /usr/bin/node-agent "$RUNTIME_IMAGE" --version \
             > evidence/runtime-version.txt
-          grep -Fxq 'node-agent version v0.13.33' evidence/runtime-version.txt
+          grep -Fxq 'node-agent version v0.13.34' evidence/runtime-version.txt
 
       - name: Verify reproducible Linux binary
         shell: bash
@@ -103,7 +119,7 @@ jobs:
           trap 'rm -rf "$source_tree" "$product_tree"' EXIT
           git archive --format=tar HEAD | tar -xf - -C "$source_tree"
           cp bin/node-agent "$product_tree/node-agent"
-          unzip -p dist/artifacts/node-agent-0.13.33-windows-amd64.zip pasturestack/node-agent.exe > "$product_tree/node-agent.exe"
+          unzip -p dist/artifacts/node-agent-0.13.34-windows-amd64.zip pasturestack/node-agent.exe > "$product_tree/node-agent.exe"
           test -s "$product_tree/node-agent.exe"
           docker run --rm -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image --download-db-only
           docker run --rm -v "$source_tree:/scan:ro" -v "$PWD/evidence:/evidence" \
@@ -123,13 +139,27 @@ jobs:
             --skip-db-update --offline-scan --scanners vuln,secret --list-all-pkgs --format json \
             --output /work/evidence/dapper-security-image.json "$DAPPER_IMAGE"
           bash .github/scripts/scan-dapper-container-binaries.sh "$DAPPER_IMAGE" "$TRIVY_IMAGE" "$cache"
+          jq -n --slurpfile source evidence/buildx-source-input.json \
+            --slurpfile baseGuard evidence/buildx-code-absence.json \
+            --rawfile pluginFix security/buildx-source-scopes/CVE-2026-33997-official-commit.json \
+            --rawfile plugin security/buildx-source-scopes/GO-2026-4883.json \
+            --rawfile copy security/buildx-source-scopes/GO-2026-5668.json \
+            --rawfile openpgp security/buildx-source-scopes/GO-2026-5932.json \
+            '{source:$source[0],baseGuard:$baseGuard[0],pluginFix:$pluginFix,osv:{"GO-2026-4883":$plugin,"GO-2026-5668":$copy,"GO-2026-5932":$openpgp}}' \
+            > evidence/buildx-additional-input.json
+          python3 -B .github/scripts/check_buildx_additional_scopes.py \
+            < evidence/buildx-additional-input.json > evidence/buildx-additional-qualification.json
           docker run --rm --entrypoint python3 "$DAPPER_IMAGE" \
             /opt/python-security/scripts/check-pip-vendor-slice.py \
             > evidence/pip-vendor-proof.json
           docker run --rm --entrypoint dockerd "$DAPPER_IMAGE" --version > evidence/dockerd-version.txt
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD:/work" -w /work -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image \
+            --skip-db-update --offline-scan --format cyclonedx \
+            --output /work/evidence/dapper.cdx.json "$DAPPER_IMAGE"
           python3 scripts/pip-security/test-pip-vex.py
           python3 scripts/pip-security/filter-pip-vendor-findings.py \
-            --raw evidence/dapper-security-raw.json --proof evidence/pip-vendor-proof.json \
+            --raw evidence/dapper-security-buildx.json --proof evidence/pip-vendor-proof.json --sbom evidence/dapper.cdx.json \
             --output evidence/dapper-security.json --vex evidence/pip-vendor.openvex.json \
             --subject "$(docker image inspect --format '{{.Id}}' "$DAPPER_IMAGE")"
           docker run --rm --entrypoint sh "$DAPPER_IMAGE" -lc \
@@ -182,10 +212,37 @@ jobs:
             -v "$PWD:/work" -w /work -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image \
             --skip-db-update --offline-scan --format cyclonedx \
             --output /work/evidence/runtime.cdx.json "$RUNTIME_IMAGE"
+          mkdir -p evidence
+          consumer_container=$(docker create "$RUNTIME_IMAGE" /bin/true)
+          if docker cp "$consumer_container:/usr/share/pasturestack/security/ubuntu-backports" evidence/ubuntu-backports; then
+              docker rm "$consumer_container" >/dev/null
+          else
+              docker rm "$consumer_container" >/dev/null
+              exit 1
+          fi
+          (cd evidence/ubuntu-backports && sha256sum --check SHA256SUMS)
+          bundle_image='ghcr.io/pasturestack/ubuntu-security-backports:v0.1.0@sha256:2742a3d429e4e14bc587f6dedc51ded4246cf90bbaedcd86c67d0885e32a6f2a'
+          mkdir -p evidence/bundle-tools
+          bundle_container=$(docker create "$bundle_image" unused)
+          if docker cp "$bundle_container:/out/verify-consumer-evidence.py" evidence/bundle-tools/verify-consumer-evidence.py && \
+              docker cp "$bundle_container:/out/SHA256SUMS" evidence/bundle-tools/SHA256SUMS; then
+              docker rm "$bundle_container" >/dev/null
+          else
+              docker rm "$bundle_container" >/dev/null
+              exit 1
+          fi
+          (cd evidence/bundle-tools && \
+              test "$(grep -Ec '^[0-9a-f]{64}  verify-consumer-evidence\.py$' SHA256SUMS)" -eq 1 && \
+              grep -E '^[0-9a-f]{64}  verify-consumer-evidence\.py$' SHA256SUMS | sha256sum --check -)
+          python3 evidence/bundle-tools/verify-consumer-evidence.py \
+              --evidence-dir evidence/ubuntu-backports --sbom evidence/runtime.cdx.json \
+              --bundle-checksums evidence/bundle-tools/SHA256SUMS \
+              --expected-bundle-digest 'sha256:2742a3d429e4e14bc587f6dedc51ded4246cf90bbaedcd86c67d0885e32a6f2a' > evidence/ubuntu-backports-validation.json
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$PWD:/work" -w /work -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image \
-            --skip-db-update --offline-scan --format cyclonedx \
-            --output /work/evidence/dapper.cdx.json "$DAPPER_IMAGE"
+            --skip-db-update --offline-scan --scanners vuln,secret --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
+            --vex /work/evidence/ubuntu-backports/openvex.json --format json \
+            --output /work/evidence/runtime-security.effective.json "$RUNTIME_IMAGE"
 
       - name: Enforce zero applicable Critical, High, or secrets
         shell: bash
@@ -194,6 +251,7 @@ jobs:
           : > evidence/security-summary.txt
           for scope in source product runtime; do
             report="evidence/${scope}-security.json"
+            if [ "$scope" = runtime ]; then report=evidence/runtime-security.effective.json; fi
             secrets=$(jq '[.Results[]?.Secrets[]?] | length' "$report")
             critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' "$report")
             high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' "$report")
@@ -263,7 +321,7 @@ jobs:
           cp security/dapper-runtime-metadata.openvex.json evidence/
           python3 .github/scripts/enforce-runtime-vulnerabilities.py --scope builder --repository PastureStack/node-agent < evidence/dapper-security.json
           python3 .github/scripts/test_runtime_vulnerability_policy.py
-          python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/runtime-security.json
+          python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/runtime-security.effective.json
           python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/product-security.json
 
       - name: Retain exact runtime for immutable release
@@ -273,8 +331,9 @@ jobs:
           mkdir -p dist/security-runtime
           docker image inspect "$RUNTIME_IMAGE" > dist/security-runtime/images.json
           docker save "$RUNTIME_IMAGE" | gzip -n > dist/security-runtime/images.tar.gz
-          cp evidence/runtime-security.json evidence/runtime.cdx.json dist/security-runtime/
-          cp dist/artifacts/node-agent-0.13.33.tar.gz dist/artifacts/node-agent-0.13.33-windows-amd64.zip dist/security-runtime/
+          cp evidence/runtime-security.json evidence/runtime-security.effective.json evidence/runtime.cdx.json dist/security-runtime/
+          tar -cf dist/security-runtime/ubuntu-backports-evidence.tar -C evidence ubuntu-backports ubuntu-backports-validation.json
+          cp dist/artifacts/node-agent-0.13.34.tar.gz dist/artifacts/node-agent-0.13.34-windows-amd64.zip dist/security-runtime/
           printf '%s\n' "$GITHUB_SHA" > dist/security-runtime/source-revision.txt
           (cd dist/security-runtime && sha256sum -- * > SHA256SUMS)
       - name: Upload exact runtime release bytes
@@ -288,10 +347,10 @@ jobs:
       - name: Retain exact scanned release packages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: node-agent-scanned-0.13.33
+          name: node-agent-scanned-0.13.34
           path: |
-            dist/artifacts/node-agent-0.13.33.tar.gz
-            dist/artifacts/node-agent-0.13.33-windows-amd64.zip
+            dist/artifacts/node-agent-0.13.34.tar.gz
+            dist/artifacts/node-agent-0.13.34-windows-amd64.zip
             dist/artifacts/SHA256SUMS
           if-no-files-found: error
           retention-days: 30

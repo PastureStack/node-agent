@@ -4,6 +4,8 @@ import json
 import sys
 from pathlib import Path
 
+import check_buildx_additional_scopes as buildx_scopes
+
 
 def violations(report, ledger, repository):
     if (not isinstance(report, dict) or report.get("SchemaVersion") != 2
@@ -109,6 +111,11 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                     p.startswith("golang.org/x/crypto/openpgp/") for p in packages):
                 raise ValueError("OpenPGP package boundary not proved")
         openpgp_absent = True
+    buildx_qualification = None
+    if repository == "PastureStack/node-agent" and node_proof and "buildxInput" in node_proof:
+        buildx_qualification = buildx_scopes.qualify(node_proof["buildxInput"])
+        if buildx_qualification != node_proof.get("buildxQualification"):
+            raise ValueError("Buildx additional qualification changed after source validation")
     retained = []
     for result in results:
         copied = dict(result)
@@ -117,6 +124,8 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
             key = (finding.get("VulnerabilityID"), finding.get("PkgName"),
                    finding.get("InstalledVersion"),
                    (finding.get("PkgIdentifier") or {}).get("PURL", ""))
+            if buildx_qualification and buildx_scopes.matches(result.get("Target"), finding, buildx_qualification):
+                continue
             is_header = (key in header_keys and key[1] == "linux-libc-dev"
                          and key[2] == "7.0.0-38.38" and key[3] == expected_purl)
             unfixed = not str(finding.get("FixedVersion") or "").strip()
@@ -198,6 +207,8 @@ if __name__ == "__main__":
             node_proof = {"pip": json.loads((repo_root / evidence_dir / "pip-vendor-proof.json").read_text(encoding="utf-8")),
                           "dockerdOpenpgp": json.loads((repo_root / evidence_dir / "dockerd-openpgp-proof.json").read_text(encoding="utf-8")),
                           "containerGraphs": {name: (repo_root / evidence_dir / "container-tools" / (name + "-package-graph.txt")).read_text(encoding="utf-8") for name in ("containerd", "ctr", "containerd-shim-runc-v2", "runc")}}
+            node_proof["buildxInput"] = json.loads((repo_root / evidence_dir / "buildx-additional-input.json").read_text(encoding="utf-8"))
+            node_proof["buildxQualification"] = json.loads((repo_root / evidence_dir / "buildx-additional-qualification.json").read_text(encoding="utf-8"))
         failures = builder_violations(report, ledger, args.repository, boundary, headers, graphs, docker_proof, node_proof)
     if failures:
         raise SystemExit("Release vulnerability policy failed:\n" + "\n".join(failures))

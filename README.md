@@ -1,5 +1,9 @@
 # PastureStack Node Agent
 
+Linux runtime **`v0.13.34`** integrates shared Ubuntu 26.04 security backports for already-installed packages while preserving the selected coreutils provider.
+
+The image retains bundle manifests, source inputs and installation receipts under `/usr/share/pasturestack/security/ubuntu-backports/`.
+
 Node Agent receives control-platform events on compute nodes, executes the corresponding container, storage, host, and configuration operations, and publishes compatible replies.
 
 PastureStack is an independent community effort to preserve, audit, and modernize the Rancher 1.6 ecosystem. It is not affiliated with or endorsed by Rancher Labs or SUSE.
@@ -22,13 +26,12 @@ From a Docker-capable Linux host:
 make test
 make build
 make package
-make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.33
+make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.34
 ```
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
 
-The current recipe packages version `0.13.33`. Source changes alone are not
-publication proof: use the [official releases](https://github.com/PastureStack/node-agent/releases)
+The recipe packages version `0.13.34`. Verify published assets using use the [official releases](https://github.com/PastureStack/node-agent/releases)
 and their SHA-256 checksums to verify published packages. Published tags and assets
 remain immutable; later documentation commits do not change their producer identity.
 The outer bootstrap image version and the Go package version are separate identities.
@@ -39,18 +42,19 @@ client 0.5, gopsutil v4.26, mapstructure v2.5, netlink v1.3, and netns v0.0.5.
 The retired AWS SDK v1, Aliyungo, root Docker module, GOPATH/Godeps, and Trash
 dependency paths are not part of the build.
 
-`VERSION_OVERRIDE=v0.13.33 make package` produces the deterministic Linux asset `node-agent-0.13.33.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
+`VERSION_OVERRIDE=v0.13.34 make package` produces the Linux asset `node-agent-0.13.34.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
 
 Upgrade existing Linux hosts through that established configcontent/pyagent
 sequence, installing the compatible Host API package before Node. Keep the
 existing platform-home data volume and Host ID; do not register a replacement
 host or create a replacement state volume. Read the installed Node version with
 `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/node-agent/node-agent --version`;
-the expected result is `node-agent version v0.13.33`.
+after installing this Linux version, the expected result is
+`node-agent version v0.13.34`.
 
 On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.8` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
 
-Windows retains the existing embedded compatibility path; this release does not provide Windows stream delegation or durable terminal evidence support. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported. The Server recipe independently pins its Windows artifact; a Linux package publication and CI cross-builds do not establish new Windows runtime acceptance.
+Windows retains the existing embedded compatibility path; this Linux image preparation does not rebuild or revalidate the separately pinned Windows runtime or provide Windows stream delegation or durable terminal evidence support. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported. The Server recipe independently pins its Windows artifact; a Linux package publication and CI cross-builds do not establish new Windows runtime acceptance.
 
 The `host.port.check` event performs a read-only host-port preflight through the existing agent event channel. It reports Docker bindings from running and stopped containers and, on Linux, listening TCP/UDP sockets visible through the existing host `/proc` mount. Incomplete host socket inspection is reported as unknown; it is never presented as an available port.
 
@@ -77,15 +81,11 @@ The disposable Dapper image rebuilds pip `26.2.2+pasturestack.1` from checksum-p
 
 ## Full-severity security rebuild
 
-The maintained release is **v0.13.33**. It updates only already-installed Ubuntu 26.04 packages using the official signed 2026-10-23 snapshot and obtains the trust bundle from the SHA-pinned official CA package. Host ID, persistent agent state, startup arguments and the required host-api v0.38.8 remain unchanged.
-
-The [successful producer gate](https://github.com/PastureStack/node-agent/actions/runs/39984353202)
-built commit `0aadd6f79890c994da2c047214a2a224471f9191`; signed release tag
-`v0.13.33` points to merged commit `2025a5a9a03c645fc18d1a2c8a345617888c2a57`
-with the identical source tree. The [formal publisher](https://github.com/PastureStack/node-agent/actions/runs/39986320411)
-retained those exact tested Linux/Windows archives and runtime image.
-Published OCI verification digest:
-`sha256:8f961ac120e3ef812ddf750d6431a99993e62077ece4a432f220a65e8dbb3877`.
+The recipe updates only already-installed Ubuntu 26.04 packages and obtains
+the trust bundle from the SHA-pinned official CA package. Host ID, persistent
+agent state, startup arguments and the required host-api v0.38.8 are unchanged.
+Use the selected release's checksum-covered assets and provenance to verify
+its producer and immutable image bytes.
 
 The full-severity runtime gate rejects every finding with an official fix,
 including LOW, MEDIUM and UNKNOWN. Only exact reviewed LOW/MEDIUM no-fix entries
