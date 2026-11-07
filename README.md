@@ -1,6 +1,6 @@
 # PastureStack Node Agent
 
-Linux runtime **`v0.13.35` source candidate** requires exactly Host API **`0.38.9`**. CI, publication and matching Server acceptance are pending. Published baseline `v0.13.34` remains separate.
+The published Linux runtime **`v0.13.35`** requires exactly Host API **`0.38.9`**. Its immutable image and Linux/Windows packages come from the same successful [security and package CI](https://github.com/PastureStack/node-agent/actions/runs/42416721086). Matching Server 584 deployment acceptance is pending.
 
 The runtime integrates shared Ubuntu 26.04 security backports for already-installed packages while preserving the selected coreutils provider.
 
@@ -33,8 +33,8 @@ make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.35
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
 
-The recipe packages candidate version `0.13.35`. Verify published assets using the [official releases](https://github.com/PastureStack/node-agent/releases)
-and their SHA-256 checksums to verify published packages. Published tags and assets
+The recipe packages version `0.13.35`. Verify the [published assets](https://github.com/PastureStack/node-agent/releases/tag/v0.13.35)
+using their SHA-256 checksums. Published tags and assets
 remain immutable; later documentation commits do not change their producer identity.
 The outer bootstrap image version and the Go package version are separate identities.
 
@@ -85,7 +85,7 @@ The disposable Dapper image rebuilds pip `26.2.2+pasturestack.2` from checksum-p
 
 The recipe updates only already-installed Ubuntu 26.04 packages and obtains
 the trust bundle from the SHA-pinned official CA package. Host ID, persistent
-agent state and startup arguments remain unchanged. This candidate advances the
+agent state and startup arguments remain unchanged. This release advances the
 exact required Host API producer from 0.38.8 to 0.38.9.
 Use the selected release's checksum-covered assets and provenance to verify
 its producer and immutable image bytes.

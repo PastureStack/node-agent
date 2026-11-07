@@ -2,16 +2,19 @@
 
 The node agent preserves established event names, reply payloads, generated client schemas, Docker labels, state fields, registration-script inputs, and storage-driver identifiers consumed by existing deployments.
 
-## Linux Host API producer in 0.13.35 candidate
+## Linux Host API producer in 0.13.35
 
-This source candidate requires exactly Host API `0.38.9`, installed before Node
+This published release requires exactly Host API `0.38.9`, installed before Node
 through the existing authenticated configcontent sequence. It rejects the old
 `0.38.8`, future versions and dirty/noncanonical output. Node does not implement
 stream authorization or the Host API EOF/drain correction. Producer paths,
 identity environment, executable ownership, parent-bound lifetime and package
 checksum contracts remain unchanged. Windows keeps its existing compatibility
 path; cross-packaging does not certify Windows runtime or delegated streams.
-CI, immutable publication and matching Server acceptance remain pending.
+CI and immutable component publication passed. Matching Server 584 deployment
+acceptance remains pending. Windows cross-packaging verifies the exact executable
+and CRLF startup script selected by the repository's Git attributes; it does not
+establish Windows host runtime acceptance.
 
 ## Linux Host API producer in 0.13.32
 
