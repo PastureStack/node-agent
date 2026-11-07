@@ -1,0 +1,127 @@
+name: Prepare exact Node header 43 scan
+
+on:
+  push:
+    branches: [prep/node-header43-01335-20261108]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  header-scan:
+    if: github.repository == 'PastureStack/node-agent' && github.ref == 'refs/heads/prep/node-header43-01335-20261108'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TRIVY_IMAGE: ghcr.io/aquasecurity/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
+      COSIGN_IMAGE: ghcr.io/sigstore/cosign/cosign:v3.1.3@sha256:9e5c2f2edc34351160407ca3416c61855bdf9403c3c5936e0f0be7fc261611b8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Materialize only the exact official header package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/prep/node-header43-01335-20261108
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          evidence="$RUNNER_TEMP/header43-evidence"
+          context="$RUNNER_TEMP/header43-context"
+          mkdir -p "$evidence" "$context"
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/source-revision.txt"
+          sha256sum .github/workflows/prepare-node-header43.yml > "$evidence/preparation-source.sha256"
+          curl --proto '=https' --proto-redir '=https' --fail --silent --show-error --location \
+            --retry 3 --connect-timeout 15 --max-time 180 \
+            --output "$context/header.deb" \
+            https://snapshot.ubuntu.com/ubuntu/20261107T200000Z/pool/main/l/linux/linux-libc-dev_7.0.0-43.43_amd64.deb
+          test "$(wc -c < "$context/header.deb")" -eq 1885328
+          echo "3a3adc14e3332fc017b1d0e4e39655298a2a977d51db6e80de533ac60137b07f  $context/header.deb" | sha256sum --check
+          test "$(dpkg-deb -f "$context/header.deb" Package)" = linux-libc-dev
+          test "$(dpkg-deb -f "$context/header.deb" Version)" = 7.0.0-43.43
+          test "$(dpkg-deb -f "$context/header.deb" Architecture)" = amd64
+          dpkg-deb -f "$context/header.deb" > "$evidence/header-deb-control.txt"
+          dpkg-deb -c "$context/header.deb" > "$evidence/header-deb-payload.txt"
+          sha256sum "$context/header.deb" > "$evidence/header-deb.sha256"
+          cat > "$context/Dockerfile" <<'DOCKERFILE'
+          FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b
+          COPY header.deb /tmp/header.deb
+          RUN echo '3a3adc14e3332fc017b1d0e4e39655298a2a977d51db6e80de533ac60137b07f  /tmp/header.deb' | sha256sum --check && \
+              dpkg -i /tmp/header.deb && rm /tmp/header.deb && \
+              test "$(dpkg-query -W -f='${Version}' linux-libc-dev)" = 7.0.0-43.43 && \
+              test "$(dpkg-query -W -f='${Architecture}' linux-libc-dev)" = amd64 && \
+              dpkg --verify linux-libc-dev
+          DOCKERFILE
+          cp "$context/Dockerfile" "$evidence/preparation-Dockerfile"
+          docker build --platform linux/amd64 --tag "local/node-header43:$GITHUB_SHA" "$context"
+          docker image inspect "local/node-header43:$GITHUB_SHA" > "$evidence/image-inspect.json"
+          docker run --rm --network none --entrypoint sh "local/node-header43:$GITHUB_SHA" -ec '
+            dpkg-query -W -f="\${binary:Package}\t\${Version}\n"
+          ' > "$evidence/dpkg.tsv"
+          docker run --rm --network none --entrypoint sh "local/node-header43:$GITHUB_SHA" -ec '
+            test "$(dpkg-query -W -f="\${Version}" linux-libc-dev)" = 7.0.0-43.43
+            dpkg-query -W -f="\${db:Status-Abbrev} \${binary:Package}\n" > /tmp/installed-packages.txt
+            if grep -Eq "^ii[[:space:]]+linux-(image|modules)([-:]|$)" /tmp/installed-packages.txt; then exit 1; fi
+            for directory in /boot /lib/modules /usr/lib/modules; do
+              if test -d "$directory" && test -n "$(find "$directory" -type f -print -quit)"; then exit 1; fi
+            done
+            dpkg-query -L linux-libc-dev | while IFS= read -r path; do
+              if test -f "$path"; then
+                case "$path" in
+                  /usr/include/*|/usr/share/doc/linux-libc-dev/*|/usr/share/lintian/overrides/linux-libc-dev) ;;
+                  *) echo "Unexpected header payload path" >&2; exit 1 ;;
+                esac
+              fi
+              printf "%s\n" "$path"
+            done
+          ' > "$evidence/installed-header-payload.txt"
+
+      - name: Verify the pinned scanner and collect original all-severity scans
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/header43-evidence"
+          cache="$RUNNER_TEMP/header43-trivy-cache"
+          rootfs="$RUNNER_TEMP/header43-rootfs"
+          mkdir -p "$cache" "$rootfs"
+          docker pull "$COSIGN_IMAGE"
+          docker pull "$TRIVY_IMAGE"
+          docker image inspect "$TRIVY_IMAGE" --format '{{range .RepoDigests}}{{println .}}{{end}}' > "$evidence/scanner-repodigests.txt"
+          grep -Fx 'ghcr.io/aquasecurity/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969' "$evidence/scanner-repodigests.txt"
+          docker run --rm "$COSIGN_IMAGE" verify \
+            --certificate-identity-regexp 'https://github\.com/aquasecurity/trivy/\.github/workflows/.+' \
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+            --output json "$TRIVY_IMAGE" > "$evidence/trivy-cosign-verification.json"
+          jq -e 'length > 0' "$evidence/trivy-cosign-verification.json" >/dev/null
+          docker run --rm "$TRIVY_IMAGE" --version > "$evidence/scanner-version.txt"
+          grep -Fx 'Version: 0.74.0' "$evidence/scanner-version.txt"
+          docker run --rm -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image --download-db-only
+          cp "$cache/db/metadata.json" "$evidence/trivy-db-metadata.json"
+          sha256sum "$cache/db/trivy.db" > "$evidence/trivy-db.sha256"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$evidence:/evidence" -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image \
+            --skip-db-update --offline-scan --scanners vuln,secret --list-all-pkgs --format json \
+            --output /evidence/header43-image-security.json "local/node-header43:$GITHUB_SHA"
+          container=$(docker create "local/node-header43:$GITHUB_SHA")
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker export "$container" | tar -xf - -C "$rootfs"
+          docker run --rm -v "$rootfs:/scan:ro" -v "$evidence:/evidence" \
+            -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" rootfs \
+            --skip-db-update --offline-scan --scanners vuln,secret --list-all-pkgs --format json \
+            --output /evidence/header43-rootfs-security.json /scan
+          for report in header43-image-security.json header43-rootfs-security.json; do
+            jq -e '.SchemaVersion == 2 and (.Results | type == "array") and any(.Results[]?.Packages[]?; .Name == "linux-libc-dev" and .Version == "7.0.0" and .Release == "43.43" and .Identifier.PURL == "pkg:deb/ubuntu/linux-libc-dev@7.0.0-43.43?arch=amd64&distro=ubuntu-26.04")' "$evidence/$report" >/dev/null
+          done
+          printf '%s\n' '{"scope":"header-only preparation","productQualification":false,"builderQualification":false,"nativeAcceptance":false,"published":false}' > "$evidence/scope.json"
+          (cd "$evidence" && sha256sum -- * > SHA256SUMS)
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: node-header43-scan-${{ github.sha }}
+          path: ${{ runner.temp }}/header43-evidence/
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 14
