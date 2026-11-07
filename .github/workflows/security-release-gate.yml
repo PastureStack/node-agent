@@ -41,7 +41,9 @@ jobs:
             scripts/package scripts/verify-package \
             .github/workflows/codeql-verification.yml \
             .github/workflows/security-release-gate.yml \
-            security/dapper.openvex.json \
+            security/dapper.openvex.json .github/dapper-header-tracked-unfixed.json \
+            .github/dapper-headers.json .github/dapper-unfixed.json \
+            .github/scripts/enforce-runtime-vulnerabilities.py .github/scripts/test_tracked_header_unfixed.py \
             security/buildx.openvex.json toolchain/build-buildx \
             .github/scripts/scan-dapper-container-binaries.sh \
             .github/scripts/check_buildx_code_absence.py \
@@ -54,8 +56,9 @@ jobs:
             scripts/pip-security/test-pip-vex.py tests/requirements.lock tests/requirements.txt \
             > evidence/source-locks.sha256
 
-      - name: Validate Buildx source applicability guards
+      - name: Validate Buildx and tracked-header policy guards
         run: |
+          python3 -B .github/scripts/test_tracked_header_unfixed.py
           python3 -B .github/scripts/test_buildx_code_absence.py
           python3 -B .github/scripts/test_join_buildx_native_vex.py
           python3 -B .github/scripts/test_buildx_additional_scopes.py
@@ -199,7 +202,7 @@ jobs:
               and ((.impact_statement | length) > 0)
             )
           ' security/dapper.openvex.json >/dev/null
-          grep -F $'linux-libc-dev:amd64\t7.0.0-42.42' evidence/dapper-dpkg.tsv >/dev/null
+          grep -F $'linux-libc-dev:amd64\t7.0.0-43.43' evidence/dapper-dpkg.tsv >/dev/null
           if grep -Eq '^linux-(image|modules)([-:]|[[:space:]])' evidence/dapper-dpkg.tsv; then
             printf 'Unexpected Linux kernel runtime package in Dapper image\n' >&2
             exit 1
@@ -319,6 +322,7 @@ jobs:
           python3 .github/scripts/test_builder_vulnerability_policy.py
           python3 .github/scripts/test_node_builder_vex.py
           cp security/dapper-runtime-metadata.openvex.json evidence/
+          cp .github/dapper-header-tracked-unfixed.json evidence/
           python3 .github/scripts/enforce-runtime-vulnerabilities.py --scope builder --repository PastureStack/node-agent < evidence/dapper-security.json
           python3 .github/scripts/test_runtime_vulnerability_policy.py
           python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/runtime-security.effective.json

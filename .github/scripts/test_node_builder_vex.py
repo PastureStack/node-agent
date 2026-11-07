@@ -12,7 +12,7 @@ class MetadataVex(unittest.TestCase):
         self.report={"SchemaVersion":2,"Results":[{"Target":"usr/local/go/bin/go","Type":"gobinary","Packages":[{"Name":"stdlib"}]}]+[
             {"Target":"usr/bin/"+name,"Type":"gobinary","Packages":[{"Name":"stdlib"}],"Vulnerabilities":[self.finding] if name=='dockerd' else []} for name in tools]}
         self.ledger={"repository":REPO,"unfixed":[]}
-        self.headers={"repository":REPO,"package":"linux-libc-dev","version":"7.0.0-42.42","purl":"pkg:deb/ubuntu/linux-libc-dev@7.0.0-42.42?arch=amd64&distro=ubuntu-26.04","ids":[]}
+        self.headers={"repository":REPO,"package":"linux-libc-dev","version":"7.0.0-43.43","purl":"pkg:deb/ubuntu/linux-libc-dev@7.0.0-43.43?arch=amd64&distro=ubuntu-26.04","ids":[]}
         graphs={name:'github.com/containerd/containerd/v2/cmd/'+name for name in ('containerd','ctr','containerd-shim-runc-v2')}
         graphs['runc']='github.com/opencontainers/runc'
         self.proof={"dockerdOpenpgp":{"binarySha256":"4e770837d688825898693db234f1723759b33650013af813eda20c21252ac7ad","sourceCommit":"70efc0e31da3a115fc87574d1b786fa2b867c346","sourceArchiveSha256":"0a58b26c1d14415c24c96b26423d53490d9e869aa26649fd820df8f74aaa6691","cryptoSymbols":779,"openpgpSymbols":0},"containerGraphs":graphs,

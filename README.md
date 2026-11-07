@@ -96,6 +96,15 @@ may pass. The original all-severity reports, exact no-fix decisions and
 binary-specific package-graph evidence are retained independently.
 ### Complete build-environment gate
 
+The builder installs checksum-pinned official Ubuntu `linux-libc-dev 7.0.0-43.43`.
+The exact existing nonexecuted-header claims remain separate from the 302
+Medium findings recorded as `tracked_unfixed` in
+`.github/dapper-header-tracked-unfixed.json`. Those findings remain in the raw
+scan and are not declared code-absent. The record binds the official package and
+original header-only scan, with a UTC next-review date of 2026-11-14. An available
+fix, changed severity/identity or unregistered finding still blocks release.
+
+
 The Dapper scan retains all severities and requires nonempty package analysis for the expected Go binaries. Any available fixed version fails, including Low, Medium and Unknown findings. Other Low/Medium findings require an exact package/version/PURL entry backed by the official vendor tracker. The pinned userspace kernel-header exception additionally requires the reviewed CVE set, actual header payload paths, and absence of kernel images/modules; it never permits an available fix. Unknown module findings require the separately verified exact source package graph, not a generic severity exemption.
 
 The disposable builder uses official Docker 29.9.3 CLI/daemon bytes, with its

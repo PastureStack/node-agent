@@ -107,8 +107,8 @@ class AdditionalScopes(unittest.TestCase):
             name: 'github.com/containerd/containerd/v2/cmd/' + name for name in (
                 'containerd', 'ctr', 'containerd-shim-runc-v2')}}
         node['containerGraphs']['runc'] = 'github.com/opencontainers/runc'
-        headers = {'repository': repo, 'package': 'linux-libc-dev', 'version': '7.0.0-42.42',
-                   'purl': 'pkg:deb/ubuntu/linux-libc-dev@7.0.0-42.42?arch=amd64&distro=ubuntu-26.04', 'ids': []}
+        headers = {'repository': repo, 'package': 'linux-libc-dev', 'version': '7.0.0-43.43',
+                   'purl': 'pkg:deb/ubuntu/linux-libc-dev@7.0.0-43.43?arch=amd64&distro=ubuntu-26.04', 'ids': []}
         run = lambda: policy.builder_violations(report, {'repository': repo, 'unfixed': []}, repo, {}, headers, node_proof=node)
         original = copy.deepcopy(report); self.assertEqual(run(), []); self.assertEqual(report, original)
         unknown = copy.deepcopy(result['Vulnerabilities'][0]); unknown['VulnerabilityID'] = 'CVE-UNKNOWN'

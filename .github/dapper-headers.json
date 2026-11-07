@@ -1,8 +1,8 @@
 {
   "repository": "PastureStack/node-agent",
   "package": "linux-libc-dev",
-  "version": "7.0.0-42.42",
-  "purl": "pkg:deb/ubuntu/linux-libc-dev@7.0.0-42.42?arch=amd64&distro=ubuntu-26.04",
+  "version": "7.0.0-43.43",
+  "purl": "pkg:deb/ubuntu/linux-libc-dev@7.0.0-43.43?arch=amd64&distro=ubuntu-26.04",
   "justification": "vulnerable_code_not_present",
   "reason": "Exact user-space API headers only. The gate checks actual package payload paths and absence of kernel images/modules. Any fixed or new finding is rejected before this scope can apply.",
   "checkedAt": "2026-10-23",
