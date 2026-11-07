@@ -1,0 +1,19 @@
+{
+  "sourceCommit": "70efc0e31da3a115fc87574d1b786fa2b867c346",
+  "sourceArchiveSha256": "0a58b26c1d14415c24c96b26423d53490d9e869aa26649fd820df8f74aaa6691",
+  "packageGraphSha256": "9548a1b9b79f6dff64fe28ae4f0aac338af14bf84b71c3d1dbf9d1b47b11833f",
+  "packageCount": 2080,
+  "repository": "https://github.com/moby/moby",
+  "upstreamRelease": "docker-v29.9.3",
+  "sourceReviewCompiler": "go1.27.0 windows/amd64",
+  "target": "linux/amd64",
+  "cgo": 1,
+  "tags": [
+    "netgo",
+    "osusergo",
+    "static_build",
+    "nri_no_wasm",
+    "journald"
+  ],
+  "reviewScope": "static package graph and symbol metadata; not execution/CI/release qualification"
+}

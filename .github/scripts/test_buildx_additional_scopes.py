@@ -17,12 +17,7 @@ policy = importlib.util.module_from_spec(spec); spec.loader.exec_module(policy)
 
 def data_fixture():
     source = fixture()
-    for field in ['modulesBefore', 'modulesAfter']:
-        source[field] += 'golang.org/x/crypto v0.57.0\n'
-    source['buildInfo'] += '\tdep\tgolang.org/x/crypto\tv0.57.0\th1:fixture\n'
     checks = list(shared.objects(source['sourceCheck']))
-    next(x['SBOM'] for x in checks if 'SBOM' in x)['modules'].append(
-        {'path': 'golang.org/x/crypto', 'version': 'v0.57.0'})
     source['sourceCheck'] = '\n'.join(json.dumps(x) for x in checks)
     raw = json.loads(source['raw'])
     for identifier, (package, version, purl) in additional.SCOPES.items():
@@ -76,10 +71,10 @@ class AdditionalScopes(unittest.TestCase):
 
     def test_compiled_openpgp_file_or_module_version_rejected(self):
         data = data_fixture()
-        data['source']['files'] += shared.MAIN + '\tmodule/golang.org/x/crypto@v0.57.0/openpgp/read.go\t' + 'a' * 64 + '\n'
+        data['source']['files'] += shared.MAIN + '\tmodule/golang.org/x/crypto@v0.58.0/openpgp/read.go\t' + 'a' * 64 + '\n'
         data['baseGuard'] = shared.source_check(data['source'])
         with self.assertRaises(ValueError): additional.qualify(data)
-        data = data_fixture(); data['source']['modulesAfter'] = data['source']['modulesAfter'].replace('v0.57.0', 'v0.58.0')
+        data = data_fixture(); data['source']['modulesAfter'] = data['source']['modulesAfter'].replace('v0.58.0', 'v0.59.0')
         with self.assertRaises(ValueError): additional.qualify(data)
 
     def test_maintained_openpgp_fork_has_a_different_official_module_scope(self):
@@ -95,7 +90,7 @@ class AdditionalScopes(unittest.TestCase):
         self.assertTrue(additional.matches(shared.TARGET, finding, proof))
         self.assertFalse(additional.matches('usr/bin/containerd', finding, proof))
         for field, value in [('VulnerabilityID', 'GO-UNKNOWN'), ('Severity', 'LOW'),
-                             ('InstalledVersion', 'v0.58.0'), ('PkgIdentifier', {'PURL': shared.PURL})]:
+                             ('InstalledVersion', 'v0.59.0'), ('PkgIdentifier', {'PURL': shared.PURL})]:
             changed = dict(finding, **{field: value})
             with self.subTest(field=field): self.assertFalse(additional.matches(shared.TARGET, changed, proof))
 
@@ -112,8 +107,8 @@ class AdditionalScopes(unittest.TestCase):
             name: 'github.com/containerd/containerd/v2/cmd/' + name for name in (
                 'containerd', 'ctr', 'containerd-shim-runc-v2')}}
         node['containerGraphs']['runc'] = 'github.com/opencontainers/runc'
-        headers = {'repository': repo, 'package': 'linux-libc-dev', 'version': '7.0.0-38.38',
-                   'purl': 'pkg:deb/ubuntu/linux-libc-dev@7.0.0-38.38?arch=amd64&distro=ubuntu-26.04', 'ids': []}
+        headers = {'repository': repo, 'package': 'linux-libc-dev', 'version': '7.0.0-42.42',
+                   'purl': 'pkg:deb/ubuntu/linux-libc-dev@7.0.0-42.42?arch=amd64&distro=ubuntu-26.04', 'ids': []}
         run = lambda: policy.builder_violations(report, {'repository': repo, 'unfixed': []}, repo, {}, headers, node_proof=node)
         original = copy.deepcopy(report); self.assertEqual(run(), []); self.assertEqual(report, original)
         unknown = copy.deepcopy(result['Vulnerabilities'][0]); unknown['VulnerabilityID'] = 'CVE-UNKNOWN'

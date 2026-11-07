@@ -8,8 +8,8 @@ import hashlib
 import re
 from pathlib import Path
 
-WHEEL_SHA = "be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a"
-VENDOR_INVENTORY_SHA = "144483e54419f59a5186652b932f7690d7b8bfaaab61ccc790c2881a89ab6212"
+WHEEL_SHA = "2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36"
+VENDOR_INVENTORY_SHA = "6b9e911363afa748740d5a514de1ecf34974645d0fb01dac23546e66d4d0f94c"
 RULES = {
     "GHSA-6v7p-g79w-8964": ("msgpack", "1.1.2"),
     "CVE-2026-57585": ("msgpack", "1.1.2"),
@@ -44,7 +44,7 @@ def namespace_wheel_absent(proof, sbom):
 
 def apply(raw, proof, subject, sbom=None):
     valid = (proof["verifiedWheelSha256"] == WHEEL_SHA and
-             proof["pip"] == "26.2.2+pasturestack.1" and proof["urllib3"] == "2.8.0" and
+             proof["pip"] == "26.2.2+pasturestack.2" and proof["urllib3"] == "2.8.0" and
              proof["msgpackImplementation"] == "pip._vendor.msgpack.fallback" and
              proof["setuptoolsPackageAbsent"] is True and proof["vendorFilesByteCompared"] == 299)
     if not valid:

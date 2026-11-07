@@ -16,7 +16,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "The original pip seed wheel is removed and replaced with pip 26.2.2+pasturestack.1, complete wheel SHA256 be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a, containing urllib3 2.8.0. The dpkg source-package version is retained for ABI dependency compatibility, not used as proof. CI verifies the actual ensurepip seed and live pip bytes, 299 vendored files, pip/urllib3 versions, and new venv/virtualenv installations. The statement fails closed for a changed wheel or an available FixedVersion.",
+      "impact_statement": "The original pip seed wheel is removed and replaced with pip 26.2.2+pasturestack.2, complete wheel SHA256 2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36, containing urllib3 2.8.0 and official msgpack 1.2.3. The dpkg source-package version is retained for ABI dependency compatibility, not used as proof. CI verifies the actual ensurepip seed and live pip bytes, 299 vendored files, pip/urllib3 versions, and new venv/virtualenv installations. The statement fails closed for a changed wheel or an available FixedVersion.",
       "references": [
         "https://github.com/pypa/pip/releases/tag/26.2.2",
         "https://github.com/urllib3/urllib3/releases/tag/2.8.0"
@@ -33,7 +33,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "The original pip seed wheel is removed and replaced with pip 26.2.2+pasturestack.1, complete wheel SHA256 be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a, containing urllib3 2.8.0. The dpkg source-package version is retained for ABI dependency compatibility, not used as proof. CI verifies the actual ensurepip seed and live pip bytes, 299 vendored files, pip/urllib3 versions, and new venv/virtualenv installations. The statement fails closed for a changed wheel or an available FixedVersion.",
+      "impact_statement": "The original pip seed wheel is removed and replaced with pip 26.2.2+pasturestack.2, complete wheel SHA256 2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36, containing urllib3 2.8.0 and official msgpack 1.2.3. The dpkg source-package version is retained for ABI dependency compatibility, not used as proof. CI verifies the actual ensurepip seed and live pip bytes, 299 vendored files, pip/urllib3 versions, and new venv/virtualenv installations. The statement fails closed for a changed wheel or an available FixedVersion.",
       "references": [
         "https://github.com/pypa/pip/releases/tag/26.2.2",
         "https://github.com/urllib3/urllib3/releases/tag/2.8.0"
@@ -50,7 +50,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "The original pip seed wheel is removed and replaced with pip 26.2.2+pasturestack.1, complete wheel SHA256 be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a, containing urllib3 2.8.0. The dpkg source-package version is retained for ABI dependency compatibility, not used as proof. CI verifies the actual ensurepip seed and live pip bytes, 299 vendored files, pip/urllib3 versions, and new venv/virtualenv installations. The statement fails closed for a changed wheel or an available FixedVersion.",
+      "impact_statement": "The original pip seed wheel is removed and replaced with pip 26.2.2+pasturestack.2, complete wheel SHA256 2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36, containing urllib3 2.8.0 and official msgpack 1.2.3. The dpkg source-package version is retained for ABI dependency compatibility, not used as proof. CI verifies the actual ensurepip seed and live pip bytes, 299 vendored files, pip/urllib3 versions, and new venv/virtualenv installations. The statement fails closed for a changed wheel or an available FixedVersion.",
       "references": [
         "https://github.com/pypa/pip/releases/tag/26.2.2",
         "https://github.com/urllib3/urllib3/releases/tag/2.8.0"
@@ -67,7 +67,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "The original pip seed wheel is removed and replaced with pip 26.2.2+pasturestack.1, complete wheel SHA256 be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a, containing urllib3 2.8.0. The dpkg source-package version is retained for ABI dependency compatibility, not used as proof. CI verifies the actual ensurepip seed and live pip bytes, 299 vendored files, pip/urllib3 versions, and new venv/virtualenv installations. The statement fails closed for a changed wheel or an available FixedVersion.",
+      "impact_statement": "The original pip seed wheel is removed and replaced with pip 26.2.2+pasturestack.2, complete wheel SHA256 2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36, containing urllib3 2.8.0 and official msgpack 1.2.3. The dpkg source-package version is retained for ABI dependency compatibility, not used as proof. CI verifies the actual ensurepip seed and live pip bytes, 299 vendored files, pip/urllib3 versions, and new venv/virtualenv installations. The statement fails closed for a changed wheel or an available FixedVersion.",
       "references": [
         "https://github.com/pypa/pip/releases/tag/26.2.2",
         "https://github.com/urllib3/urllib3/releases/tag/2.8.0"

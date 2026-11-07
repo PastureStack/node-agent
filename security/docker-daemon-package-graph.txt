@@ -1001,8 +1001,13 @@ github.com/cloudflare/cfssl/signer/local
 github.com/cloudflare/cfssl/initca
 github.com/moby/swarmkit/v2/ca/pkcs8
 github.com/moby/swarmkit/v2/ca/keyutils
-golang.org/x/net/context
-github.com/grpc-ecosystem/go-grpc-prometheus
+github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors
+google.golang.org/grpc/reflection/grpc_reflection_v1
+google.golang.org/grpc/reflection/grpc_reflection_v1alpha
+google.golang.org/grpc/reflection/internal
+google.golang.org/grpc/reflection
+github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus
+github.com/moby/swarmkit/v2/internal/grpcmetrics
 github.com/moby/swarmkit/v2/remotes
 github.com/moby/swarmkit/v2/connectionbroker
 github.com/moby/swarmkit/v2/identity
@@ -1012,7 +1017,6 @@ github.com/moby/swarmkit/v2/watch/queue
 github.com/moby/swarmkit/v2/watch
 github.com/moby/swarmkit/v2/manager/state
 github.com/moby/swarmkit/v2/manager/state/store
-golang.org/x/net/context/ctxhttp
 github.com/moby/swarmkit/v2/ca
 github.com/moby/swarmkit/v2/node/plugin
 github.com/moby/moby/v2/daemon/cluster/convert
@@ -1551,9 +1555,6 @@ google.golang.org/api/option
 google.golang.org/api/option/internaloption
 cloud.google.com/go/auth/internal/compute
 cloud.google.com/go/auth/internal/transport
-cloud.google.com/go/auth/httptransport
-cloud.google.com/go/auth/credentials/impersonate
-cloud.google.com/go/auth/credentials/idtoken
 google.golang.org/grpc/credentials/alts/internal
 google.golang.org/grpc/credentials/alts/internal/proto/grpc_gcp
 google.golang.org/grpc/credentials/alts/internal/authinfo
@@ -1572,6 +1573,7 @@ google.golang.org/grpc/balancer/grpclb/grpc_lb_v1
 google.golang.org/grpc/resolver/manual
 google.golang.org/grpc/balancer/grpclb
 google.golang.org/api/transport/grpc
+cloud.google.com/go/auth/httptransport
 google.golang.org/api/googleapi/transport
 google.golang.org/api/transport/http
 cloud.google.com/go/longrunning/autogen

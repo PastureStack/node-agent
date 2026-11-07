@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import zipfile
 
-EXPECTED_SHA = "be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a"
+EXPECTED_SHA = "2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36"
 FINDINGS = {
     "GHSA-6v7p-g79w-8964": ("msgpack", "1.1.2", "C/Cython unpacker is absent; runtime selects pure Python fallback"),
     "CVE-2026-57585": ("msgpack", "1.1.2", "C/Cython unpacker is absent; runtime selects pure Python fallback"),
@@ -27,8 +27,9 @@ def verify(wheel):
     import pip
     from pip._vendor import msgpack, urllib3
     assert hashlib.sha256(wheel.read_bytes()).hexdigest() == EXPECTED_SHA
-    assert pip.__version__ == "26.2.2+pasturestack.1"
+    assert pip.__version__ == "26.2.2+pasturestack.2"
     assert urllib3.__version__ == "2.8.0"
+    assert msgpack.__version__ == "1.2.3"
     assert msgpack.Unpacker.__module__ == "pip._vendor.msgpack.fallback"
     live = importlib.resources.files("pip")
     checked = 0
@@ -90,7 +91,7 @@ if __name__ == "__main__":
     except ImportError:
         # compose's distro runtime intentionally has no ensurepip package.
         # Its build retains the verified input at this fixed, non-user path.
-        result = verify(Path("/opt/python-security/pip-26.2.2+pasturestack.1-py3-none-any.whl"))
+        result = verify(Path("/opt/python-security/pip-26.2.2+pasturestack.2-py3-none-any.whl"))
     else:
         with ensurepip._get_pip_whl_path_ctx() as wheel:
             result = verify(Path(wheel))

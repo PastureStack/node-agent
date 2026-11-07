@@ -83,18 +83,18 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                     for p in graphs[name].splitlines()) for name, root in roots.items()):
             raise ValueError("missing exact container-tool package graphs")
     has_headers = any(f.get("PkgName") == "linux-libc-dev" for r in results for f in (r.get("Vulnerabilities") or []))
-    if has_headers and header_boundary != {"package": "linux-libc-dev", "version": "7.0.0-38.38",
+    if has_headers and header_boundary != {"package": "linux-libc-dev", "version": "7.0.0-42.42",
                                            "kernel_images": False, "kernel_modules": False}:
         raise ValueError("missing exact installed-header boundary proof")
     if header_ledger.get("repository") != repository:
         raise ValueError("header review repository mismatch")
     if (header_ledger.get("package") != "linux-libc-dev"
-            or header_ledger.get("version") != "7.0.0-38.38"
-            or header_ledger.get("purl") != "pkg:deb/ubuntu/linux-libc-dev@7.0.0-38.38?arch=amd64&distro=ubuntu-26.04"):
+            or header_ledger.get("version") != "7.0.0-42.42"
+            or header_ledger.get("purl") != "pkg:deb/ubuntu/linux-libc-dev@7.0.0-42.42?arch=amd64&distro=ubuntu-26.04"):
         raise ValueError("changed header review boundary")
     header_keys = {(identifier, header_ledger["package"], header_ledger["version"], header_ledger["purl"])
                    for identifier in header_ledger.get("ids", [])}
-    expected_purl = "pkg:deb/ubuntu/linux-libc-dev@7.0.0-38.38?arch=amd64&distro=ubuntu-26.04"
+    expected_purl = "pkg:deb/ubuntu/linux-libc-dev@7.0.0-42.42?arch=amd64&distro=ubuntu-26.04"
     openpgp_absent = False
     if package_graphs:
         if repository not in ("PastureStack/kubernetes-authentication-bridge", "PastureStack/ecr-credential-sync"):
@@ -127,7 +127,7 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
             if buildx_qualification and buildx_scopes.matches(result.get("Target"), finding, buildx_qualification):
                 continue
             is_header = (key in header_keys and key[1] == "linux-libc-dev"
-                         and key[2] == "7.0.0-38.38" and key[3] == expected_purl)
+                         and key[2] == "7.0.0-42.42" and key[3] == expected_purl)
             unfixed = not str(finding.get("FixedVersion") or "").strip()
             if is_header and unfixed:
                 continue
@@ -152,15 +152,16 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                 if (key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
                             "pkg:golang/golang.org/x/crypto@v0.58.0")
                         and result.get("Target") == "usr/bin/dockerd"
-                        and daemon.get("binarySha256") == "3a6132d4d99c1437e3422599f802207a3def9ba4de00ec1004a8e40d2740b9b0"
-                        and daemon.get("sourceCommit") == "0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c"
-                        and daemon.get("sourcePackageGraphSha256") == "5b64dcb5265f1d7345e94688a0ee0700887000359cd25cc8f184d88835e79fd4"
+                        and daemon.get("binarySha256") == "4e770837d688825898693db234f1723759b33650013af813eda20c21252ac7ad"
+                        and daemon.get("sourceCommit") == "70efc0e31da3a115fc87574d1b786fa2b867c346"
+                        and daemon.get("sourceArchiveSha256") == "0a58b26c1d14415c24c96b26423d53490d9e869aa26649fd820df8f74aaa6691"
+                        and daemon.get("sourcePackageGraphSha256") == "9548a1b9b79f6dff64fe28ae4f0aac338af14bf84b71c3d1dbf9d1b47b11833f"
                         and daemon.get("cryptoSymbols", 0) > 0
                         and daemon.get("openpgpSymbols") == 0):
                     continue
                 graphs = node_proof.get("containerGraphs", {})
-                if (key == ("GO-2026-5932", "golang.org/x/crypto", "v0.57.0",
-                            "pkg:golang/golang.org/x/crypto@v0.57.0")
+                if (key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
+                            "pkg:golang/golang.org/x/crypto@v0.58.0")
                         and result.get("Target") in ("usr/bin/containerd", "usr/bin/ctr", "usr/bin/containerd-shim-runc-v2")
                         and set(graphs) == {"containerd", "ctr", "containerd-shim-runc-v2", "runc"}
                         and all(graph and not any(p == "golang.org/x/crypto/openpgp" or p.startswith("golang.org/x/crypto/openpgp/") for p in graph.splitlines()) for graph in graphs.values())):
@@ -169,8 +170,8 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                 if (key[0] in ("CVE-2025-66418", "CVE-2025-66471", "CVE-2026-21441", "CVE-2026-1703")
                         and key[1] == "python3-pip-whl" and key[2] == "25.1.1+dfsg-1ubuntu2"
                         and key[3] == "pkg:deb/ubuntu/python3-pip-whl@25.1.1%2Bdfsg-1ubuntu2?arch=all&distro=ubuntu-26.04"
-                        and pip.get("verifiedWheelSha256") == "be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a"
-                        and pip.get("pip") == "26.2.2+pasturestack.1"
+                        and pip.get("verifiedWheelSha256") == "2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36"
+                        and pip.get("pip") == "26.2.2+pasturestack.2"
                         and pip.get("urllib3") == "2.8.0" and pip.get("vendorFilesByteCompared") == 299):
                     continue
             copied["Vulnerabilities"].append(finding)

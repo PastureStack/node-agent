@@ -19,7 +19,7 @@ proof_spec.loader.exec_module(vendor_proof)
 
 class VexBoundary(unittest.TestCase):
     def setUp(self):
-        self.proof = {"verifiedWheelSha256": vex.WHEEL_SHA, "pip": "26.2.2+pasturestack.1",
+        self.proof = {"verifiedWheelSha256": vex.WHEEL_SHA, "pip": "26.2.2+pasturestack.2",
                       "urllib3": "2.8.0", "msgpackImplementation": "pip._vendor.msgpack.fallback",
                       "setuptoolsPackageAbsent": True, "vendorFilesByteCompared": 299,
                       "notAffected": [{"id": key, "package": value[0], "version": value[1],
@@ -75,9 +75,10 @@ class VexBoundary(unittest.TestCase):
     def test_unknown_advisory_and_urllib3_are_retained(self):
         unknown = {"VulnerabilityID": "CVE-TEST-UNKNOWN", "PkgName": "setuptools", "InstalledVersion": "70.3.0"}
         urllib = {"VulnerabilityID": "CVE-2026-97689", "PkgName": "urllib3", "InstalledVersion": "2.7.0"}
-        self.raw["Results"][0]["Vulnerabilities"] += [unknown, urllib]
+        msgpack = {"VulnerabilityID": "CVE-2026-114613", "PkgName": "msgpack", "InstalledVersion": "1.1.2"}
+        self.raw["Results"][0]["Vulnerabilities"] += [unknown, urllib, msgpack]
         result, _ = vex.apply(self.raw, self.proof, "urn:test:image", self.sbom)
-        self.assertEqual(result["Results"][0]["Vulnerabilities"], [unknown, urllib])
+        self.assertEqual(result["Results"][0]["Vulnerabilities"], [unknown, urllib, msgpack])
 
     @staticmethod
     def rehash_inventory(proof):
