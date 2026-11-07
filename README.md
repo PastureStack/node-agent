@@ -96,6 +96,11 @@ may pass. The original all-severity reports, exact no-fix decisions and
 binary-specific package-graph evidence are retained independently.
 ### Complete build-environment gate
 
+The final runtime installs checksum-pinned official APT `3.2.1ubuntu0.1`.
+The disposable builder installs official PCRE2 `10.46-1ubuntu0.1`; the runtime
+retains its independently qualified shared PCRE2 backport. CI compares both the
+complete pip core and vendor file sets with the selected patched wheel.
+
 The builder installs checksum-pinned official Ubuntu `linux-libc-dev 7.0.0-43.43`.
 The exact existing nonexecuted-header claims remain separate from the 302
 Medium findings recorded as `tracked_unfixed` in

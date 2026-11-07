@@ -111,6 +111,7 @@ jobs:
           done
 
       - name: Scan source, product, runtime, and build image
+        id: scan
         shell: bash
         run: |
           set -euo pipefail
@@ -317,16 +318,19 @@ jobs:
           PY
 
       - name: Enforce full runtime vulnerability policy
+        if: ${{ !cancelled() && steps.scan.conclusion == 'success' }}
         run: |
           bash .github/scripts/check-builder-header-boundary.sh "$DAPPER_IMAGE" > evidence/dapper-header-boundary.json
           python3 .github/scripts/test_builder_vulnerability_policy.py
           python3 .github/scripts/test_node_builder_vex.py
           cp security/dapper-runtime-metadata.openvex.json evidence/
           cp .github/dapper-header-tracked-unfixed.json evidence/
-          python3 .github/scripts/enforce-runtime-vulnerabilities.py --scope builder --repository PastureStack/node-agent < evidence/dapper-security.json
+          policy_failed=0
+          python3 .github/scripts/enforce-runtime-vulnerabilities.py --scope builder --repository PastureStack/node-agent < evidence/dapper-security.json || policy_failed=1
           python3 .github/scripts/test_runtime_vulnerability_policy.py
-          python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/runtime-security.effective.json
-          python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/product-security.json
+          python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/runtime-security.effective.json || policy_failed=1
+          python3 .github/scripts/enforce-runtime-vulnerabilities.py --repository PastureStack/node-agent < evidence/product-security.json || policy_failed=1
+          test "$policy_failed" -eq 0
 
       - name: Retain exact runtime for immutable release
         shell: bash

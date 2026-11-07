@@ -23,6 +23,29 @@ def require_setuptools_wheel_absent(wheel_names, live_vendor):
     assert not live_vendor.joinpath("setuptools/wheel.py").is_file(), "Vulnerable setuptools wheel module is installed"
 
 
+def require_pip_core_exact(archive, live):
+    """Match every installed pip core file and its complete set to the pinned wheel."""
+    expected = {name.removeprefix("pip/"): archive.read(name) for name in archive.namelist()
+                if name.startswith("pip/") and not name.startswith("pip/_vendor/") and not name.endswith("/")}
+    assert expected, "Missing pip core source in wheel"
+    def live_core_files(directory, prefix=""):
+        for entry in directory.iterdir():
+            if entry.name == "__pycache__" or (not prefix and entry.name == "_vendor"):
+                continue
+            relative = prefix + entry.name
+            if entry.is_dir():
+                yield from live_core_files(entry, relative + "/")
+            else:
+                yield relative
+    assert set(live_core_files(live)) == set(expected), "Unexpected or missing live pip core files"
+    inventory = []
+    for name, content in sorted(expected.items()):
+        assert live.joinpath(name).read_bytes() == content, "Installed pip core differs from wheel: " + name
+        inventory.append({"path": name, "sha256": hashlib.sha256(content).hexdigest()})
+    return {"pipCoreFilesByteCompared": len(inventory), "pipCoreFileSetMatched": True,
+            "pipCoreInventorySha256": hashlib.sha256(json.dumps(inventory, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
+
+
 def verify(wheel):
     import pip
     from pip._vendor import msgpack, urllib3
@@ -49,6 +72,7 @@ def verify(wheel):
         assert not any(name.startswith("pip/_vendor/setuptools/") for name in names)
         assert not any(name.startswith("pip/_vendor/msgpack/_cmsgpack") for name in names)
         require_setuptools_wheel_absent(names, live.joinpath("_vendor"))
+        core_proof = require_pip_core_exact(archive, live)
     def live_files(directory, prefix=""):
         for entry in directory.iterdir():
             if entry.name == "__pycache__":
@@ -67,7 +91,7 @@ def verify(wheel):
             assert distribution.version != "1.1.2", "A separate msgpack 1.1.2 distribution is installed"
     inventory.sort(key=lambda item: item["path"])
     inventory_sha = hashlib.sha256(json.dumps(inventory, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-    return {"verifiedWheelSha256": EXPECTED_SHA, "pip": pip.__version__,
+    return {**core_proof, "verifiedWheelSha256": EXPECTED_SHA, "pip": pip.__version__,
             "urllib3": urllib3.__version__, "vendorFilesByteCompared": checked,
             "msgpackImplementation": msgpack.Unpacker.__module__,
             "setuptoolsPackageAbsent": True, "scope": "this exact pip vendor slice only",

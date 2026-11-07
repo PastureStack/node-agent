@@ -10,6 +10,7 @@ COPY scripts/install-dapper-official-security /usr/local/bin/install-dapper-offi
 ADD --checksum=sha256:0de729b8fe0e1c67c04e8e8d5bd6e0420dbd47f75b93f0b71c8e740edc2d5ffc https://snapshot.ubuntu.com/ubuntu/20261107T000000Z/pool/main/a/apt/apt_3.2.1ubuntu0.1_amd64.deb /opt/dapper-official-security/apt.deb
 ADD --checksum=sha256:94e5d41303265b66af0f8c70ade18bfb77260ad286edee6c8045faddef82b94c https://snapshot.ubuntu.com/ubuntu/20261107T000000Z/pool/main/a/apt/libapt-pkg7.0_3.2.1ubuntu0.1_amd64.deb /opt/dapper-official-security/libapt-pkg7.0.deb
 ADD --checksum=sha256:bedeef1cf3268f90338c411cdb0a45b224d0660fd2240f310f380316c8244606 https://snapshot.ubuntu.com/ubuntu/20261107T000000Z/pool/main/b/brotli/libbrotli1_1.2.0-3ubuntu0.1_amd64.deb /opt/dapper-official-security/libbrotli1.deb
+ADD --checksum=sha256:44ebbeb6493eacffbc460ca71446959ba86a00b2e23515e4cfb1a5cc317d6672 https://snapshot.ubuntu.com/ubuntu/20261107T200000Z/pool/main/p/pcre2/libpcre2-8-0_10.46-1ubuntu0.1_amd64.deb /opt/dapper-official-security/libpcre2-8-0.deb
 
 ARG DAPPER_HOST_ARCH=amd64
 ENV HOST_ARCH=${DAPPER_HOST_ARCH} ARCH=${DAPPER_HOST_ARCH}
@@ -100,6 +101,7 @@ RUN set -eux; \
     rm -f /opt/pasturestack-ca-certificates.deb && \
     sh /usr/local/libexec/pasturestack/install-ubuntu-security-updates /licenses/ubuntu-security-packages.lock /etc/ssl/certs/ca-certificates.crt && \
     bash /usr/local/bin/install-dapper-official-security brotli && \
+    bash /usr/local/bin/install-dapper-official-security pcre2 && \
     rm -rf /opt/dapper-official-security && \
     rm -rf /var/lib/apt/lists/* && \
     rm -f /usr/bin/pebble && \

@@ -227,9 +227,15 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                     and docker_proof.get("sourceCommit") == "a7dcaa6fdb6ed04aacbfdc76357fdae01605609e"
                     and len(docker_proof.get("binarySha256", "")) == 64):
                 continue
-            if (unfixed and repository == "PastureStack/node-agent" and node_proof):
+            if (repository == "PastureStack/node-agent" and node_proof):
+                # The exact deprecated-package absence proof is independent of
+                # this one official GoDB fixed marker. Other markers still fail.
+                openpgp_metadata_matches = unfixed or (
+                    finding.get("FixedVersion") == "0.58.1-0.20261009181718-2f1f834330b2"
+                    and finding.get("Severity") == "UNKNOWN"
+                    and (finding.get("DataSource") or {}).get("ID") == "govulndb")
                 daemon = node_proof.get("dockerdOpenpgp", {})
-                if (key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
+                if (openpgp_metadata_matches and key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
                             "pkg:golang/golang.org/x/crypto@v0.58.0")
                         and result.get("Target") == "usr/bin/dockerd"
                         and daemon.get("binarySha256") == "4e770837d688825898693db234f1723759b33650013af813eda20c21252ac7ad"
@@ -240,19 +246,35 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                         and daemon.get("openpgpSymbols") == 0):
                     continue
                 graphs = node_proof.get("containerGraphs", {})
-                if (key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
+                if (openpgp_metadata_matches and key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
                             "pkg:golang/golang.org/x/crypto@v0.58.0")
                         and result.get("Target") in ("usr/bin/containerd", "usr/bin/ctr", "usr/bin/containerd-shim-runc-v2")
                         and set(graphs) == {"containerd", "ctr", "containerd-shim-runc-v2", "runc"}
                         and all(graph and not any(p == "golang.org/x/crypto/openpgp" or p.startswith("golang.org/x/crypto/openpgp/") for p in graph.splitlines()) for graph in graphs.values())):
                     continue
                 pip = node_proof.get("pip", {})
-                if (key[0] in ("CVE-2025-66418", "CVE-2025-66471", "CVE-2026-21441", "CVE-2026-1703")
+                if (unfixed and key[0] in ("CVE-2025-66418", "CVE-2025-66471", "CVE-2026-21441", "CVE-2026-1703")
                         and key[1] == "python3-pip-whl" and key[2] == "25.1.1+dfsg-1ubuntu2"
                         and key[3] == "pkg:deb/ubuntu/python3-pip-whl@25.1.1%2Bdfsg-1ubuntu2?arch=all&distro=ubuntu-26.04"
                         and pip.get("verifiedWheelSha256") == "2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36"
                         and pip.get("pip") == "26.2.2+pasturestack.2"
                         and pip.get("urllib3") == "2.8.0" and pip.get("vendorFilesByteCompared") == 299):
+                    continue
+                # PYSEC-2026-196 is fixed in upstream pip 26.1.2. The old
+                # distro seed metadata can qualify only with actual full-core
+                # bytes from this exact patched wheel, never a version alone.
+                if (key == ("CVE-2026-8643", "python3-pip-whl", "25.1.1+dfsg-1ubuntu2",
+                            "pkg:deb/ubuntu/python3-pip-whl@25.1.1%2Bdfsg-1ubuntu2?arch=all&distro=ubuntu-26.04")
+                        and result.get("Class") == "os-pkgs" and result.get("Type") == "ubuntu"
+                        and finding.get("Severity") == "MEDIUM"
+                        and finding.get("FixedVersion") in (None, "", "26.1.2")
+                        and pip.get("verifiedWheelSha256") == "2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36"
+                        and pip.get("pip") == "26.2.2+pasturestack.2"
+                        and pip.get("vendorFilesByteCompared") == 299
+                        and pip.get("vendorInventorySha256") == "6b9e911363afa748740d5a514de1ecf34974645d0fb01dac23546e66d4d0f94c"
+                        and pip.get("pipCoreFilesByteCompared") == 157
+                        and pip.get("pipCoreInventorySha256") == "51be05e205130ecb1655f762f5933177269a9e665d1f4075a8921557998ddce5"
+                        and pip.get("pipCoreFileSetMatched") is True):
                     continue
             copied["Vulnerabilities"].append(finding)
         retained.append(copied)

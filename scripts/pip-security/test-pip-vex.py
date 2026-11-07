@@ -7,6 +7,7 @@ import hashlib
 import json
 import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("pip_vex", Path(__file__).with_name("filter-pip-vendor-findings.py"))
@@ -15,6 +16,30 @@ spec.loader.exec_module(vex)
 proof_spec = importlib.util.spec_from_file_location("pip_vendor_proof", Path(__file__).with_name("check-pip-vendor-slice.py"))
 vendor_proof = importlib.util.module_from_spec(proof_spec)
 proof_spec.loader.exec_module(vendor_proof)
+
+
+class PipCoreBoundary(unittest.TestCase):
+    def test_core_proof_compares_every_file_and_full_set(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);live=root/'pip';live.mkdir()
+            (live/'_internal').mkdir();(live/'_vendor').mkdir();(live/'__pycache__').mkdir()
+            (live/'__init__.py').write_bytes(b'__version__ = "26.2.2+pasturestack.2"\n')
+            (live/'_internal/core.py').write_bytes(b'patched core fixture\n')
+            (live/'_vendor/ignored.py').write_bytes(b'vendor has a separate existing checker\n')
+            with zipfile.ZipFile(root/'fixture.whl','w') as archive:
+                archive.write(live/'__init__.py','pip/__init__.py');archive.write(live/'_internal/core.py','pip/_internal/core.py')
+            with zipfile.ZipFile(root/'fixture.whl') as archive:
+                proof=vendor_proof.require_pip_core_exact(archive,live)
+                self.assertEqual(proof['pipCoreFilesByteCompared'],2);self.assertIs(proof['pipCoreFileSetMatched'],True)
+                for change in ('wrong-bytes','missing','extra'):
+                    core=live/'_internal/core.py';core.write_bytes(b'patched core fixture\n')
+                    extra=live/'extra.py'
+                    if extra.exists():extra.unlink()
+                    if change=='wrong-bytes':core.write_bytes(b'stale vulnerable core fixture\n')
+                    elif change=='missing':core.unlink()
+                    else:extra.write_bytes(b'unexpected core\n')
+                    with self.subTest(change=change),self.assertRaises(AssertionError):
+                        vendor_proof.require_pip_core_exact(archive,live)
 
 
 class VexBoundary(unittest.TestCase):
