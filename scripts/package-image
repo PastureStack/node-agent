@@ -32,22 +32,38 @@ cp scripts/install-ubuntu-security-updates "$tmpdir/"
 curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
     --retry 2 --connect-timeout 10 --max-time 120 \
     -o "$tmpdir/ca-certificates.deb" \
-    https://archive.ubuntu.com/ubuntu/pool/main/c/ca-certificates/ca-certificates_20260816ubuntu0.26.04.1_all.deb
+    https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/c/ca-certificates/ca-certificates_20260816ubuntu0.26.04.1_all.deb
 printf '%s  %s\n' 5b6326f1932cfd7be57130561dc78192f09ed9f58bfbe6606ed0c50510c3b6cd \
     "$tmpdir/ca-certificates.deb" | sha256sum --check
 
 curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
     --retry 2 --connect-timeout 10 --max-time 120 \
     -o "$tmpdir/libssl3t64.deb" \
-    https://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl3t64_3.5.5-1ubuntu3.7_amd64.deb
+    https://snapshot.ubuntu.com/ubuntu/20261023T000000Z/pool/main/o/openssl/libssl3t64_3.5.5-1ubuntu3.7_amd64.deb
 printf '%s  %s\n' 3ff73e121f6cd4f19e80ab4329dfd914108b3936c9db3708200203a9b245b34d \
     "$tmpdir/libssl3t64.deb" | sha256sum --check
 curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
     --retry 2 --connect-timeout 10 --max-time 120 \
     -o "$tmpdir/openssl-provider-legacy.deb" \
-    https://security.ubuntu.com/ubuntu/pool/main/o/openssl/openssl-provider-legacy_3.5.5-1ubuntu3.7_amd64.deb
+    https://snapshot.ubuntu.com/ubuntu/20261023T000000Z/pool/main/o/openssl/openssl-provider-legacy_3.5.5-1ubuntu3.7_amd64.deb
 printf '%s  %s\n' 51cf418571059831096abd40e0bd5debaa1ae48a6f8d87d9e4e5f7f12aa4db52 \
     "$tmpdir/openssl-provider-legacy.deb" | sha256sum --check
+
+# Same qualified official APT pair as the builder; include it in the runtime context.
+curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+    --retry 2 --connect-timeout 10 --max-time 120 \
+    -o "$tmpdir/apt.deb" \
+    https://snapshot.ubuntu.com/ubuntu/20261107T000000Z/pool/main/a/apt/apt_3.2.1ubuntu0.1_amd64.deb
+test "$(wc -c < "$tmpdir/apt.deb")" -eq 1506688
+printf '%s  %s\n' 0de729b8fe0e1c67c04e8e8d5bd6e0420dbd47f75b93f0b71c8e740edc2d5ffc \
+    "$tmpdir/apt.deb" | sha256sum --check
+curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+    --retry 2 --connect-timeout 10 --max-time 120 \
+    -o "$tmpdir/libapt-pkg7.0.deb" \
+    https://snapshot.ubuntu.com/ubuntu/20261107T000000Z/pool/main/a/apt/libapt-pkg7.0_3.2.1ubuntu0.1_amd64.deb
+test "$(wc -c < "$tmpdir/libapt-pkg7.0.deb")" -eq 1139022
+printf '%s  %s\n' 94e5d41303265b66af0f8c70ade18bfb77260ad286edee6c8045faddef82b94c \
+    "$tmpdir/libapt-pkg7.0.deb" | sha256sum --check
 
 docker build \
     --network="${DOCKER_BUILD_NETWORK:-default}" \

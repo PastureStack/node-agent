@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import zipfile
 
-EXPECTED_SHA = "be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a"
+EXPECTED_SHA = "2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36"
 FINDINGS = {
     "GHSA-6v7p-g79w-8964": ("msgpack", "1.1.2", "C/Cython unpacker is absent; runtime selects pure Python fallback"),
     "CVE-2026-57585": ("msgpack", "1.1.2", "C/Cython unpacker is absent; runtime selects pure Python fallback"),
@@ -23,12 +23,36 @@ def require_setuptools_wheel_absent(wheel_names, live_vendor):
     assert not live_vendor.joinpath("setuptools/wheel.py").is_file(), "Vulnerable setuptools wheel module is installed"
 
 
+def require_pip_core_exact(archive, live):
+    """Match every installed pip core file and its complete set to the pinned wheel."""
+    expected = {name.removeprefix("pip/"): archive.read(name) for name in archive.namelist()
+                if name.startswith("pip/") and not name.startswith("pip/_vendor/") and not name.endswith("/")}
+    assert expected, "Missing pip core source in wheel"
+    def live_core_files(directory, prefix=""):
+        for entry in directory.iterdir():
+            if entry.name == "__pycache__" or (not prefix and entry.name == "_vendor"):
+                continue
+            relative = prefix + entry.name
+            if entry.is_dir():
+                yield from live_core_files(entry, relative + "/")
+            else:
+                yield relative
+    assert set(live_core_files(live)) == set(expected), "Unexpected or missing live pip core files"
+    inventory = []
+    for name, content in sorted(expected.items()):
+        assert live.joinpath(name).read_bytes() == content, "Installed pip core differs from wheel: " + name
+        inventory.append({"path": name, "sha256": hashlib.sha256(content).hexdigest()})
+    return {"pipCoreFilesByteCompared": len(inventory), "pipCoreFileSetMatched": True,
+            "pipCoreInventorySha256": hashlib.sha256(json.dumps(inventory, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
+
+
 def verify(wheel):
     import pip
     from pip._vendor import msgpack, urllib3
     assert hashlib.sha256(wheel.read_bytes()).hexdigest() == EXPECTED_SHA
-    assert pip.__version__ == "26.2.2+pasturestack.1"
+    assert pip.__version__ == "26.2.2+pasturestack.2"
     assert urllib3.__version__ == "2.8.0"
+    assert msgpack.__version__ == "1.2.3"
     assert msgpack.Unpacker.__module__ == "pip._vendor.msgpack.fallback"
     live = importlib.resources.files("pip")
     checked = 0
@@ -48,6 +72,7 @@ def verify(wheel):
         assert not any(name.startswith("pip/_vendor/setuptools/") for name in names)
         assert not any(name.startswith("pip/_vendor/msgpack/_cmsgpack") for name in names)
         require_setuptools_wheel_absent(names, live.joinpath("_vendor"))
+        core_proof = require_pip_core_exact(archive, live)
     def live_files(directory, prefix=""):
         for entry in directory.iterdir():
             if entry.name == "__pycache__":
@@ -66,7 +91,7 @@ def verify(wheel):
             assert distribution.version != "1.1.2", "A separate msgpack 1.1.2 distribution is installed"
     inventory.sort(key=lambda item: item["path"])
     inventory_sha = hashlib.sha256(json.dumps(inventory, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-    return {"verifiedWheelSha256": EXPECTED_SHA, "pip": pip.__version__,
+    return {**core_proof, "verifiedWheelSha256": EXPECTED_SHA, "pip": pip.__version__,
             "urllib3": urllib3.__version__, "vendorFilesByteCompared": checked,
             "msgpackImplementation": msgpack.Unpacker.__module__,
             "setuptoolsPackageAbsent": True, "scope": "this exact pip vendor slice only",
@@ -90,7 +115,7 @@ if __name__ == "__main__":
     except ImportError:
         # compose's distro runtime intentionally has no ensurepip package.
         # Its build retains the verified input at this fixed, non-user path.
-        result = verify(Path("/opt/python-security/pip-26.2.2+pasturestack.1-py3-none-any.whl"))
+        result = verify(Path("/opt/python-security/pip-26.2.2+pasturestack.2-py3-none-any.whl"))
     else:
         with ensurepip._get_pip_whl_path_ctx() as wheel:
             result = verify(Path(wheel))

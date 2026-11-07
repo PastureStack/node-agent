@@ -45,6 +45,8 @@ def main():
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--input-cache", type=Path)
     parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--materialize-candidate", action="store_true",
+                        help="Prepare two identical candidate wheels and exact pins; never qualifies or installs them")
     args = parser.parse_args()
     output, work = args.output.resolve(), args.work.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -134,25 +136,61 @@ drop = ["*.dist-info/", "bin/"]
     assert (generated / "__init__.py").is_file()
     shutil.rmtree(vendor / "urllib3")  # exact disposable source subtree only
     shutil.copytree(generated, vendor / "urllib3")
+    # Build the official msgpack sdist without C extensions, then use the same
+    # upstream vendoring tool/namespace as pip. No hand-copied namespace code.
+    msgpack_parent = scratch / "msgpack-source"
+    msgpack_parent.mkdir()
+    with tarfile.open(paths["msgpack-source"][0]) as archive:
+        for member in archive.getmembers():
+            assert not member.issym() and not member.islnk()
+            assert (msgpack_parent / member.name).resolve().is_relative_to(msgpack_parent)
+        archive.extractall(msgpack_parent, filter="data")
+    msgpack_source = next(msgpack_parent.iterdir())
+    msgpack_environment = dict(environment, MSGPACK_PUREPYTHON="1")
+    run([python, "-m", "pip", "wheel", "--no-build-isolation", "--no-deps",
+         "--wheel-dir", downloads, msgpack_source], scratch, msgpack_environment)
+    msgpack_wheels = list(downloads.glob("msgpack-1.2.3-py3-none-any.whl"))
+    assert len(msgpack_wheels) == 1
+    with zipfile.ZipFile(msgpack_wheels[0]) as archive:
+        assert not any(name.endswith((".so", ".pyd")) for name in archive.namelist())
+    msgpack_scoped = scratch / "msgpack-vendoring"
+    msgpack_vendor = msgpack_scoped / "src/pip/_vendor"
+    msgpack_vendor.mkdir(parents=True)
+    (msgpack_vendor / "vendor.txt").write_text("msgpack==1.2.3\n")
+    (msgpack_scoped / "tools/vendoring/patches").mkdir(parents=True)
+    (msgpack_scoped / "pyproject.toml").write_text("""[tool.vendoring]
+ destination = "src/pip/_vendor/"
+ requirements = "src/pip/_vendor/vendor.txt"
+ namespace = "pip._vendor"
+ protected-files = ["vendor.txt"]
+ patches-dir = "tools/vendoring/patches"
+ [tool.vendoring.transformations]
+ drop = ["*.dist-info/", "bin/"]
+""")
+    run([python, "-m", "vendoring", "sync", "-v"], msgpack_scoped, environment)
+    assert (msgpack_vendor / "msgpack/__init__.py").is_file()
+    shutil.rmtree(vendor / "msgpack")  # exact disposable source subtree only
+    shutil.copytree(msgpack_vendor / "msgpack", vendor / "msgpack")
     vendor_txt = vendor / "vendor.txt"
     text = vendor_txt.read_text()
     assert text.count("urllib3==2.7.0") == 1
-    vendor_txt.write_text(text.replace("urllib3==2.7.0", "urllib3==2.8.0"))
+    assert text.count("msgpack==1.1.2") == 1
+    vendor_txt.write_text(text.replace("urllib3==2.7.0", "urllib3==2.8.0").replace("msgpack==1.1.2", "msgpack==1.2.3"))
     version_file = source / "src/pip/__init__.py"
     version_file.write_text(version_file.read_text().replace('__version__ = "26.2.2"',
                            f'__version__ = "{config["version"]}"'))
     readme = vendor / "README.rst"
     with readme.open("a") as handle:
         handle.write("\n\nPastureStack security rebuild\n============================\n\n"
-                     "This downstream local-version wheel uses released urllib3 2.8.0\n"
+                     "This downstream local-version wheel uses released urllib3 2.8.0 and msgpack 1.2.3\n"
                      "through upstream vendoring 1.4.0 and pip's unchanged urllib3\n"
-                     "patches. Other vendored library sources and licenses are unchanged.\n"
+                     "patches and pure-Python msgpack. Other vendored sources and licenses are unchanged.\n"
                      "It is not an official PyPA pip release.\n")
     run([python, "-c", "from pathlib import Path; from vendoring.sbom import create_sbom_file; create_sbom_file('pip._vendor', Path('src/pip/_vendor/vendor.txt'), Path('src/pip/_vendor/bom.cdx.json'))"], source, environment)
     current = {str(p.relative_to(vendor)): sha(p) for p in vendor.rglob("*") if p.is_file()}
     allowed = {"vendor.txt", "README.rst", "bom.cdx.json"}
-    assert {p: value for p, value in original.items() if not p.startswith("urllib3/") and p not in allowed} == {
-        p: value for p, value in current.items() if not p.startswith("urllib3/") and p not in allowed}
+    assert {p: value for p, value in original.items() if not p.startswith(("urllib3/", "msgpack/")) and p not in allowed} == {
+        p: value for p, value in current.items() if not p.startswith(("urllib3/", "msgpack/")) and p not in allowed}
     wheels = []
     for suffix in ("first", "second"):
         directory = scratch / suffix
@@ -160,7 +198,10 @@ drop = ["*.dist-info/", "bin/"]
         run([python, "-c", f"from flit_core.buildapi import build_wheel; build_wheel({str(directory)!r})"], source, environment)
         wheels.append(next(directory.glob("*.whl")))
     assert sha(wheels[0]) == sha(wheels[1]), "wheel rebuild is not byte reproducible"
-    assert sha(wheels[0]) == config["expectedWheelSha256"], "unexpected rebuilt product bytes"
+    if not args.materialize_candidate:
+        assert sha(wheels[0]) == config["expectedWheelSha256"], "unexpected rebuilt product bytes"
+    # The candidate path cannot install or qualify a wheel. Normal image builds
+    # omit this option and retain the exact expected hash plus installer pins.
     wheel = output / wheels[0].name
     shutil.copy2(wheels[0], wheel)
     licenses = []
@@ -180,11 +221,18 @@ drop = ["*.dist-info/", "bin/"]
         assert "pip/_vendor/pkg_resources/__init__.py" in names
         assert not any("setuptools/package_index" in name for name in names)
         shutil.copy2(vendor / "bom.cdx.json", output / "pip-vendor.cdx.json")
-    report = {"version": config["version"], "upstreamVersion": config["upstreamVersion"],
+    with zipfile.ZipFile(wheel) as archive:
+        inventory = sorted([{"path": name.removeprefix("pip/_vendor/"), "sha256": hashlib.sha256(archive.read(name)).hexdigest()}
+                            for name in archive.namelist() if name.startswith("pip/_vendor/") and not name.endswith("/")],
+                           key=lambda item: item["path"])
+    inventory_sha = hashlib.sha256(json.dumps(inventory, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    report = {"status": "CANDIDATE_NOT_QUALIFIED" if args.materialize_candidate else "EXACT_PINNED_BUILD",
+              "vendorInventoryCount": len(inventory), "vendorInventorySha256": inventory_sha,
+              "vendorInventory": inventory, "version": config["version"], "upstreamVersion": config["upstreamVersion"],
               "upstreamCommit": config["sourceCommit"], "wheel": wheel.name,
               "sha256": sha(wheel), "twoBuildsByteIdentical": True,
               "allRecordHashesVerified": True, "nativeExtensionsPresent": False,
-              "licenses": licenses, "onlyVendoredLibraryChanged": "urllib3", "urllib3": "2.8.0"}
+              "licenses": licenses, "onlyVendoredLibrariesChanged": {"urllib3": "2.8.0", "msgpack": "1.2.3"}, "urllib3": "2.8.0", "msgpack": "1.2.3"}
     (output / "build-evidence.json").write_text(json.dumps(report, indent=2) + "\n")
     shutil.copy2(requirements, output / "tools.lock")
     shutil.copy2(Path(__file__).with_name("inputs.json"), output / "inputs.json")

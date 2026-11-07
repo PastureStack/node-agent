@@ -17,7 +17,7 @@ import (
 	"github.com/rancher/log"
 )
 
-const RequiredVersion = "0.38.8"
+const RequiredVersion = "0.38.9"
 
 type Settings struct {
 	Binary string

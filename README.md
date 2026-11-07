@@ -1,6 +1,8 @@
 # PastureStack Node Agent
 
-Linux runtime **`v0.13.34`** integrates shared Ubuntu 26.04 security backports for already-installed packages while preserving the selected coreutils provider.
+Linux runtime **`v0.13.35` source candidate** requires exactly Host API **`0.38.9`**. CI, publication and matching Server acceptance are pending. Published baseline `v0.13.34` remains separate.
+
+The runtime integrates shared Ubuntu 26.04 security backports for already-installed packages while preserving the selected coreutils provider.
 
 The image retains bundle manifests, source inputs and installation receipts under `/usr/share/pasturestack/security/ubuntu-backports/`.
 
@@ -26,12 +28,12 @@ From a Docker-capable Linux host:
 make test
 make build
 make package
-make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.34
+make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.35
 ```
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
 
-The recipe packages version `0.13.34`. Verify published assets using use the [official releases](https://github.com/PastureStack/node-agent/releases)
+The recipe packages candidate version `0.13.35`. Verify published assets using the [official releases](https://github.com/PastureStack/node-agent/releases)
 and their SHA-256 checksums to verify published packages. Published tags and assets
 remain immutable; later documentation commits do not change their producer identity.
 The outer bootstrap image version and the Go package version are separate identities.
@@ -42,7 +44,7 @@ client 0.5, gopsutil v4.26, mapstructure v2.5, netlink v1.3, and netns v0.0.5.
 The retired AWS SDK v1, Aliyungo, root Docker module, GOPATH/Godeps, and Trash
 dependency paths are not part of the build.
 
-`VERSION_OVERRIDE=v0.13.34 make package` produces the Linux asset `node-agent-0.13.34.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release is published by this repository; Server can embed that verified archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
+`VERSION_OVERRIDE=v0.13.35 make package` produces the Linux asset `node-agent-0.13.35.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release must pass this repository's normal publication and byte verification before Server can embed that archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
 
 Upgrade existing Linux hosts through that established configcontent/pyagent
 sequence, installing the compatible Host API package before Node. Keep the
@@ -50,9 +52,9 @@ existing platform-home data volume and Host ID; do not register a replacement
 host or create a replacement state volume. Read the installed Node version with
 `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/node-agent/node-agent --version`;
 after installing this Linux version, the expected result is
-`node-agent version v0.13.34`.
+`node-agent version v0.13.35`.
 
-On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.8` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
+On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.9` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
 
 Windows retains the existing embedded compatibility path; this Linux image preparation does not rebuild or revalidate the separately pinned Windows runtime or provide Windows stream delegation or durable terminal evidence support. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported. The Server recipe independently pins its Windows artifact; a Linux package publication and CI cross-builds do not establish new Windows runtime acceptance.
 
@@ -77,13 +79,14 @@ The inherited project remains licensed under [Apache License 2.0](LICENSE). Copy
 Maintained Go builds select the patched Go 1.27.3 compiler without raising the existing Go language requirement. Ubuntu build/runtime stages apply the checksum-pinned `ca-certificates 20260816ubuntu0.26.04.1` security package after their frozen APT baseline; the final trust store and installed version are verified. Python tooling uses the patched pip/CA path; CI interpreter pins remain on the Python 3.14 series. Release artifacts must pass the repository's existing checks before publication.
 # Python installer security rebuild
 
-The disposable Dapper image rebuilds pip `26.2.2+pasturestack.1` from checksum-pinned official inputs using upstream vendoring and the original urllib3 patches. Only urllib3 changes to released `2.8.0`; this is a local security rebuild, not a new official PyPA release. The expected wheel SHA-256 is `be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a`. Ubuntu's Python ABI is retained. The image tests live pip, available ensurepip/new-venv seeds, virtualenv, streaming limits, and trusted/untrusted TLS. See `scripts/pip-security/README.md` for source and license evidence.
+The disposable Dapper image rebuilds pip `26.2.2+pasturestack.2` from checksum-pinned official inputs using upstream vendoring and the original urllib3 patches. urllib3 uses released `2.8.0` and msgpack uses released `1.2.3`; this is a local security rebuild, not a new official PyPA release. The expected wheel SHA-256 is `2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36`. Ubuntu's Python ABI is retained. The image tests live pip, available ensurepip/new-venv seeds, virtualenv, streaming limits, and trusted/untrusted TLS. See `scripts/pip-security/README.md` for source and license evidence.
 
 ## Full-severity security rebuild
 
 The recipe updates only already-installed Ubuntu 26.04 packages and obtains
 the trust bundle from the SHA-pinned official CA package. Host ID, persistent
-agent state, startup arguments and the required host-api v0.38.8 are unchanged.
+agent state and startup arguments remain unchanged. This candidate advances the
+exact required Host API producer from 0.38.8 to 0.38.9.
 Use the selected release's checksum-covered assets and provenance to verify
 its producer and immutable image bytes.
 
@@ -93,9 +96,23 @@ may pass. The original all-severity reports, exact no-fix decisions and
 binary-specific package-graph evidence are retained independently.
 ### Complete build-environment gate
 
+The final runtime installs checksum-pinned official APT `3.2.1ubuntu0.1`.
+The disposable builder installs official PCRE2 `10.46-1ubuntu0.1`; the runtime
+retains its independently qualified shared PCRE2 backport. CI compares both the
+complete pip core and vendor file sets with the selected patched wheel.
+
+The builder installs checksum-pinned official Ubuntu `linux-libc-dev 7.0.0-43.43`.
+The exact existing nonexecuted-header claims remain separate from the 302
+Medium findings recorded as `tracked_unfixed` in
+`.github/dapper-header-tracked-unfixed.json`. Those findings remain in the raw
+scan and are not declared code-absent. The record binds the official package and
+original header-only scan, with a UTC next-review date of 2026-11-14. An available
+fix, changed severity/identity or unregistered finding still blocks release.
+
+
 The Dapper scan retains all severities and requires nonempty package analysis for the expected Go binaries. Any available fixed version fails, including Low, Medium and Unknown findings. Other Low/Medium findings require an exact package/version/PURL entry backed by the official vendor tracker. The pinned userspace kernel-header exception additionally requires the reviewed CVE set, actual header payload paths, and absence of kernel images/modules; it never permits an available fix. Unknown module findings require the separately verified exact source package graph, not a generic severity exemption.
 
-The disposable builder uses official Docker 29.9.2 CLI/daemon bytes, with its
+The disposable builder uses official Docker 29.9.3 CLI/daemon bytes, with its
 supported Go 1.26.10 compiler, rather than Ubuntu's outdated embedded Go tools.
 Containerd stays on the 2.2 compatibility branch at 2.2.10 and runc stays on 1.4
 at 1.4.3; both are rebuilt from SHA-pinned released sources using Go 1.27.3 and
@@ -116,9 +133,9 @@ unpublished v2 commit nor the CLI's digest mitigation is substituted. Future
 official fixed-version findings remain blocking. The exact official daemon's
 `golang.org/x/crypto/openpgp` absence is separately checked against its SHA and
 nonempty crypto symbol control; it does not exempt the distribution finding.
-The retained 2,078-package daemon source graph is from official commit
-`0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c`, Linux/amd64, CGO=1 and official tags
+The retained 2,080-package daemon source graph is from official commit
+`70efc0e31da3a115fc87574d1b786fa2b867c346`, Linux/amd64, CGO=1 and official tags
 `netgo,osusergo,static_build,nri_no_wasm,journald`, resolved offline from the
-official vendor tree using Go 1.27.3. That analysis compiler is not the official
+official vendor tree using Go 1.27.0 for this static source review. That analysis compiler is not the official
 binary's Go 1.26.10 compiler. The graph includes ProtonMail's distinct OpenPGP
 implementation; no claim is made that all OpenPGP code is absent.

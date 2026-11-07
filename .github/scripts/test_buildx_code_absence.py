@@ -14,9 +14,8 @@ def finding(cve, purl=guard.PURL):
 
 def fixture():
     binding = dict(guard.PINS, goarch='amd64', binarySha256='a' * 64)
-    modules = {'github.com/docker/docker': 'v28.5.2+incompatible',
-               'github.com/moby/go-archive': 'v0.3.0', 'golang.org/x/net': 'v0.60.0'}
-    before = dict(modules, **{'github.com/moby/go-archive': 'v0.2.0', 'golang.org/x/net': 'v0.59.0'})
+    modules = {'github.com/docker/docker': 'v28.5.2+incompatible', 'github.com/klauspost/compress': 'v1.20.2', 'github.com/moby/go-archive': 'v0.3.0', 'golang.org/x/crypto': 'v0.58.0', 'golang.org/x/net': 'v0.62.0', 'golang.org/x/sync': 'v0.24.0', 'golang.org/x/sys': 'v0.49.0', 'golang.org/x/telemetry': 'v0.0.0-20260924152758-ed294f943157', 'golang.org/x/term': 'v0.47.0', 'golang.org/x/text': 'v0.43.0', 'golang.org/x/tools': 'v0.51.0'}
+    before = {'github.com/docker/docker': 'v28.5.2+incompatible', 'github.com/klauspost/compress': 'v1.20.1', 'github.com/moby/go-archive': 'v0.2.0', 'golang.org/x/crypto': 'v0.57.0', 'golang.org/x/net': 'v0.59.0', 'golang.org/x/sync': 'v0.23.0', 'golang.org/x/sys': 'v0.48.0', 'golang.org/x/telemetry': 'v0.0.0-20260811182544-a038080d80e5', 'golang.org/x/term': 'v0.46.0', 'golang.org/x/text': 'v0.42.0', 'golang.org/x/tools': 'v0.49.0'}
     checks = [{'config': {'scanner_name': 'govulncheck', 'scanner_version': 'v1.9.0',
                           'scan_mode': 'source', 'scan_level': 'package'}},
               {'SBOM': {'go_version': 'go1.27.3', 'roots': [guard.MAIN],
@@ -71,7 +70,7 @@ class BuildxEvidenceTests(unittest.TestCase):
                            ('binding', guard.PINS['sourceArchiveSha256']),
                            ('binding', guard.PINS['updatedGoModSha256']),
                            ('binarySha256', 'a' * 64), ('buildInfo', 'go1.27.3'),
-                           ('buildInfo', 'GOARCH=amd64'), ('buildInfo', 'v0.60.0')]:
+                           ('buildInfo', 'GOARCH=amd64'), ('buildInfo', 'v0.62.0')]:
             with self.subTest(field=field, old=old):
                 data = fixture(); data[field] = data[field].replace(old, 'wrong', 1)
                 with self.assertRaises(ValueError):

@@ -26,6 +26,35 @@ LABEL org.opencontainers.image.source="https://github.com/PastureStack/node-agen
       org.opencontainers.image.version="${PASTURESTACK_IMAGE_VERSION}"
 
 RUN rm -f /usr/bin/pebble
+# Official fixed APT pair, before the runtime's existing micro-update calls.
+COPY apt.deb libapt-pkg7.0.deb /tmp/
+RUN set -eu; \
+    . /etc/os-release; test "$ID:$VERSION_ID" = ubuntu:26.04; \
+    before=$(mktemp); after=$(mktemp); trap 'rm -f "$before" "$after"' EXIT; \
+    dpkg-query -W -f='${binary:Package}\t${db:Status-Status}\n' | LC_ALL=C sort > "$before"; \
+    for package in apt libapt-pkg7.0; do \
+        case "$package" in \
+            apt) hash=0de729b8fe0e1c67c04e8e8d5bd6e0420dbd47f75b93f0b71c8e740edc2d5ffc; bytes=1506688 ;; \
+            libapt-pkg7.0) hash=94e5d41303265b66af0f8c70ade18bfb77260ad286edee6c8045faddef82b94c; bytes=1139022 ;; \
+            *) exit 2 ;; \
+        esac; \
+        test "$(wc -c < "/tmp/${package}.deb")" -eq "$bytes"; \
+        printf '%s  %s\n' "$hash" "/tmp/${package}.deb" | sha256sum --check; \
+        test "$(dpkg-deb -f "/tmp/${package}.deb" Package)" = "$package"; \
+        test "$(dpkg-deb -f "/tmp/${package}.deb" Version)" = 3.2.1ubuntu0.1; \
+        test "$(dpkg-deb -f "/tmp/${package}.deb" Architecture)" = amd64; \
+        test "$(dpkg-query -W -f='${db:Status-Status}' "$package")" = installed; \
+        test "$(dpkg-query -W -f='${Architecture}' "$package")" = amd64; \
+        dpkg --compare-versions "$(dpkg-query -W -f='${Version}' "$package")" le 3.2.1ubuntu0.1; \
+    done; \
+    dpkg -i /tmp/libapt-pkg7.0.deb /tmp/apt.deb; \
+    for package in apt libapt-pkg7.0; do \
+        test "$(dpkg-query -W -f='${Version}' "$package")" = 3.2.1ubuntu0.1; \
+        test "$(dpkg-query -W -f='${db:Status-Status}' "$package")" = installed; \
+        rm -f "/tmp/${package}.deb"; \
+    done; \
+    dpkg-query -W -f='${binary:Package}\t${db:Status-Status}\n' | LC_ALL=C sort > "$after"; \
+    cmp "$before" "$after"
 COPY libssl3t64.deb openssl-provider-legacy.deb /tmp/
 RUN set -eu; \
     for package in libssl3t64 openssl-provider-legacy; do \
@@ -54,6 +83,10 @@ RUN --mount=from=ubuntu_security_backports,source=/out,target=/opt/pasturestack/
     done; \
     printf '%s\n' 'ghcr.io/pasturestack/ubuntu-security-backports:v0.1.0@sha256:2742a3d429e4e14bc587f6dedc51ded4246cf90bbaedcd86c67d0885e32a6f2a' > "${evidence}/bundle-image.txt"; \
     (cd "${evidence}" && sha256sum manifest.json qualification.json openvex.json source-inputs.lock.json install.json verify.json bundle-image.txt > SHA256SUMS); \
+    for package in apt libapt-pkg7.0; do \
+        test "$(dpkg-query -W -f='${Version}' "$package")" = 3.2.1ubuntu0.1; \
+        test "$(dpkg-query -W -f='${db:Status-Status}' "$package")" = installed; \
+    done; \
     dpkg-query -W -f='${binary:Package}\t${Version}\n' | LC_ALL=C sort > /usr/share/pasturestack/ubuntu-security-packages.tsv; \
     rm -f /var/cache/ldconfig/aux-cache
 

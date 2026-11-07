@@ -462,6 +462,18 @@
       "officialEvidence": "https://git.launchpad.net/ubuntu-cve-tracker/plain/active/CVE-2026-18508",
       "reason": "Canonical Ubuntu 26.04 status: resolute_tar: needed. No official resolute fixed package is available; keep tracking.",
       "checkedAt": "2026-10-23"
+    },
+    {
+      "severity": "MEDIUM",
+      "package": "perl-base",
+      "id": "CVE-2026-82560",
+      "purl": "pkg:deb/ubuntu/perl-base@5.40.1-7ubuntu0.3?arch=amd64&distro=ubuntu-26.04",
+      "version": "5.40.1-7ubuntu0.3",
+      "status": "no_official_fix",
+      "officialEvidence": "https://ubuntu.com/security/CVE-2026-82560",
+      "reason": "Canonical lists Ubuntu 26.04 resolute perl as vulnerable without a fixed Ubuntu package. Upstream podlators 6.1.1 is available; track the distribution backport instead of replacing system modules. The original raw scanner finding remains recorded.",
+      "checkedAt": "2026-11-07",
+      "nextReview": "2026-11-14"
     }
   ]
 }

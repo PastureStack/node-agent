@@ -81,8 +81,9 @@ def main():
               "streaming": boundary_tests(not args.expect_vulnerable)}
     if args.expect_vulnerable:
         print(json.dumps(result)); return
-    assert pip.__version__ == "26.2.2+pasturestack.1"
+    assert pip.__version__ == "26.2.2+pasturestack.2"
     assert urllib3.__version__ == "2.8.0"
+    assert msgpack.__version__ == "1.2.3"
     assert msgpack.Unpacker.__module__ == "pip._vendor.msgpack.fallback"
     import importlib.util
     assert importlib.util.find_spec("pip._vendor.msgpack._cmsgpack") is None

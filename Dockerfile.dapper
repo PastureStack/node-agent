@@ -5,34 +5,41 @@ RUN rm -f /usr/bin/pebble
 COPY package/ubuntu-security-packages.lock /licenses/ubuntu-security-packages.lock
 COPY scripts/install-ubuntu-security-updates /usr/local/libexec/pasturestack/install-ubuntu-security-updates
 
+COPY package/dapper-official-security.lock.json /licenses/dapper-official-security.lock.json
+COPY scripts/install-dapper-official-security /usr/local/bin/install-dapper-official-security
+ADD --checksum=sha256:0de729b8fe0e1c67c04e8e8d5bd6e0420dbd47f75b93f0b71c8e740edc2d5ffc https://snapshot.ubuntu.com/ubuntu/20261107T000000Z/pool/main/a/apt/apt_3.2.1ubuntu0.1_amd64.deb /opt/dapper-official-security/apt.deb
+ADD --checksum=sha256:94e5d41303265b66af0f8c70ade18bfb77260ad286edee6c8045faddef82b94c https://snapshot.ubuntu.com/ubuntu/20261107T000000Z/pool/main/a/apt/libapt-pkg7.0_3.2.1ubuntu0.1_amd64.deb /opt/dapper-official-security/libapt-pkg7.0.deb
+ADD --checksum=sha256:bedeef1cf3268f90338c411cdb0a45b224d0660fd2240f310f380316c8244606 https://snapshot.ubuntu.com/ubuntu/20261107T000000Z/pool/main/b/brotli/libbrotli1_1.2.0-3ubuntu0.1_amd64.deb /opt/dapper-official-security/libbrotli1.deb
+ADD --checksum=sha256:44ebbeb6493eacffbc460ca71446959ba86a00b2e23515e4cfb1a5cc317d6672 https://snapshot.ubuntu.com/ubuntu/20261107T200000Z/pool/main/p/pcre2/libpcre2-8-0_10.46-1ubuntu0.1_amd64.deb /opt/dapper-official-security/libpcre2-8-0.deb
+
 ARG DAPPER_HOST_ARCH=amd64
 ENV HOST_ARCH=${DAPPER_HOST_ARCH} ARCH=${DAPPER_HOST_ARCH}
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG UBUNTU_SNAPSHOT=20260825T000000Z
 
-ADD --checksum=sha256:2c418a61d7165d0cde01d9cb05ae025cc41fc75ef6d3f095996bd045ba0945dc https://security.ubuntu.com/ubuntu/pool/main/c/curl/curl_8.18.0-1ubuntu2.8_amd64.deb /tmp/curl.deb
-ADD --checksum=sha256:8db913e1fa5a694ca6ba7b828bd18c5204e6853ac07fe7ed9c6e1f94e3444d8e https://security.ubuntu.com/ubuntu/pool/main/c/curl/libcurl3t64-gnutls_8.18.0-1ubuntu2.8_amd64.deb /tmp/libcurl3t64-gnutls.deb
-ADD --checksum=sha256:7c0b37592f83a629cc22f0c98effa176da9edbd6d77b3f38184a9d0ddc5e0266 https://security.ubuntu.com/ubuntu/pool/main/c/curl/libcurl4t64_8.18.0-1ubuntu2.8_amd64.deb /tmp/libcurl4t64.deb
-ADD --checksum=sha256:3ff73e121f6cd4f19e80ab4329dfd914108b3936c9db3708200203a9b245b34d https://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl3t64_3.5.5-1ubuntu3.7_amd64.deb /tmp/libssl3t64.deb
-ADD --checksum=sha256:6965aafe69e0a49ef34d2e26f8e83d09d1c6037b7e9ee37f19b292a3c6851621 https://security.ubuntu.com/ubuntu/pool/main/o/openssl/openssl_3.5.5-1ubuntu3.7_amd64.deb /tmp/openssl.deb
-ADD --checksum=sha256:51cf418571059831096abd40e0bd5debaa1ae48a6f8d87d9e4e5f7f12aa4db52 https://security.ubuntu.com/ubuntu/pool/main/o/openssl/openssl-provider-legacy_3.5.5-1ubuntu3.7_amd64.deb /tmp/openssl-provider-legacy.deb
-ADD --checksum=sha256:0498bc9510149ef06abd6c09b8932e43c5bc71b68634b4b8f84488b2e0a20e82 https://security.ubuntu.com/ubuntu/pool/main/l/linux/linux-libc-dev_7.0.0-38.38_amd64.deb /tmp/linux-libc-dev.deb
+ADD --checksum=sha256:2c418a61d7165d0cde01d9cb05ae025cc41fc75ef6d3f095996bd045ba0945dc https://snapshot.ubuntu.com/ubuntu/20261023T000000Z/pool/main/c/curl/curl_8.18.0-1ubuntu2.8_amd64.deb /tmp/curl.deb
+ADD --checksum=sha256:8db913e1fa5a694ca6ba7b828bd18c5204e6853ac07fe7ed9c6e1f94e3444d8e https://snapshot.ubuntu.com/ubuntu/20261023T000000Z/pool/main/c/curl/libcurl3t64-gnutls_8.18.0-1ubuntu2.8_amd64.deb /tmp/libcurl3t64-gnutls.deb
+ADD --checksum=sha256:7c0b37592f83a629cc22f0c98effa176da9edbd6d77b3f38184a9d0ddc5e0266 https://snapshot.ubuntu.com/ubuntu/20261023T000000Z/pool/main/c/curl/libcurl4t64_8.18.0-1ubuntu2.8_amd64.deb /tmp/libcurl4t64.deb
+ADD --checksum=sha256:3ff73e121f6cd4f19e80ab4329dfd914108b3936c9db3708200203a9b245b34d https://snapshot.ubuntu.com/ubuntu/20261023T000000Z/pool/main/o/openssl/libssl3t64_3.5.5-1ubuntu3.7_amd64.deb /tmp/libssl3t64.deb
+ADD --checksum=sha256:6965aafe69e0a49ef34d2e26f8e83d09d1c6037b7e9ee37f19b292a3c6851621 https://snapshot.ubuntu.com/ubuntu/20261023T000000Z/pool/main/o/openssl/openssl_3.5.5-1ubuntu3.7_amd64.deb /tmp/openssl.deb
+ADD --checksum=sha256:51cf418571059831096abd40e0bd5debaa1ae48a6f8d87d9e4e5f7f12aa4db52 https://snapshot.ubuntu.com/ubuntu/20261023T000000Z/pool/main/o/openssl/openssl-provider-legacy_3.5.5-1ubuntu3.7_amd64.deb /tmp/openssl-provider-legacy.deb
+ADD --checksum=sha256:3a3adc14e3332fc017b1d0e4e39655298a2a977d51db6e80de533ac60137b07f https://snapshot.ubuntu.com/ubuntu/20261107T200000Z/pool/main/l/linux/linux-libc-dev_7.0.0-43.43_amd64.deb /tmp/linux-libc-dev.deb
 
 ADD --checksum=sha256:5b6326f1932cfd7be57130561dc78192f09ed9f58bfbe6606ed0c50510c3b6cd \
-    https://archive.ubuntu.com/ubuntu/pool/main/c/ca-certificates/ca-certificates_20260816ubuntu0.26.04.1_all.deb \
+    https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/c/ca-certificates/ca-certificates_20260816ubuntu0.26.04.1_all.deb \
     /tmp/ca-certificates.deb
-ADD --checksum=sha256:76c12c7936d7a2e898f972b8b40ec74f3b58f1a534e67e256e1aa9d28c6c43d8 https://security.ubuntu.com/ubuntu/pool/main/p/python3.14/libpython3.14_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/libpython3.14.deb
-ADD --checksum=sha256:6f2e99c80311934d0a031bb12fe2faca684b05e5b6bb225fe9a07a5c05fdb3da https://security.ubuntu.com/ubuntu/pool/main/p/python3.14/libpython3.14-dev_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/libpython3.14-dev.deb
-ADD --checksum=sha256:fac6f0728cf9490a7a698e6b343e4140283e92355b060193c04f5770a666df8a https://security.ubuntu.com/ubuntu/pool/main/p/python3.14/libpython3.14-minimal_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/libpython3.14-minimal.deb
-ADD --checksum=sha256:3c267ef0f902f763c3615cbf28dd6fe91d2e4f603075d7f03db99f8d4eb66f46 https://security.ubuntu.com/ubuntu/pool/main/p/python3.14/libpython3.14-stdlib_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/libpython3.14-stdlib.deb
-ADD --checksum=sha256:780c308c47d8afcbb7d339f0023350e7cf60c1a37e9572a1f88774cc18f60526 https://security.ubuntu.com/ubuntu/pool/main/p/python3.14/python3.14_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/python3.14.deb
-ADD --checksum=sha256:5e76e07f9ebb181eda92986297eca3488aaf81f53f0efcfdd32866a409f94071 https://security.ubuntu.com/ubuntu/pool/main/p/python3.14/python3.14-dev_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/python3.14-dev.deb
-ADD --checksum=sha256:9d806b46f6dc429f156c5c53e6e2ec5bfc89302f9a441483b3249211e18e0067 https://security.ubuntu.com/ubuntu/pool/main/p/python3.14/python3.14-gdbm_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/python3.14-gdbm.deb
-ADD --checksum=sha256:0a7ea8a52834f9b3de0f11758924f80f7a6ebcbb4b02a55ba4f457503569f55f https://security.ubuntu.com/ubuntu/pool/main/p/python3.14/python3.14-minimal_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/python3.14-minimal.deb
-ADD --checksum=sha256:cad2456bf3cb57cb18d2c82b48b549e5b4ac6eee9b3e14e65334209387e3d0ae https://security.ubuntu.com/ubuntu/pool/universe/p/python3.14/python3.14-venv_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/python3.14-venv.deb
+ADD --checksum=sha256:76c12c7936d7a2e898f972b8b40ec74f3b58f1a534e67e256e1aa9d28c6c43d8 https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/p/python3.14/libpython3.14_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/libpython3.14.deb
+ADD --checksum=sha256:6f2e99c80311934d0a031bb12fe2faca684b05e5b6bb225fe9a07a5c05fdb3da https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/p/python3.14/libpython3.14-dev_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/libpython3.14-dev.deb
+ADD --checksum=sha256:fac6f0728cf9490a7a698e6b343e4140283e92355b060193c04f5770a666df8a https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/p/python3.14/libpython3.14-minimal_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/libpython3.14-minimal.deb
+ADD --checksum=sha256:3c267ef0f902f763c3615cbf28dd6fe91d2e4f603075d7f03db99f8d4eb66f46 https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/p/python3.14/libpython3.14-stdlib_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/libpython3.14-stdlib.deb
+ADD --checksum=sha256:780c308c47d8afcbb7d339f0023350e7cf60c1a37e9572a1f88774cc18f60526 https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/p/python3.14/python3.14_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/python3.14.deb
+ADD --checksum=sha256:5e76e07f9ebb181eda92986297eca3488aaf81f53f0efcfdd32866a409f94071 https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/p/python3.14/python3.14-dev_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/python3.14-dev.deb
+ADD --checksum=sha256:9d806b46f6dc429f156c5c53e6e2ec5bfc89302f9a441483b3249211e18e0067 https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/p/python3.14/python3.14-gdbm_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/python3.14-gdbm.deb
+ADD --checksum=sha256:0a7ea8a52834f9b3de0f11758924f80f7a6ebcbb4b02a55ba4f457503569f55f https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/p/python3.14/python3.14-minimal_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/python3.14-minimal.deb
+ADD --checksum=sha256:cad2456bf3cb57cb18d2c82b48b549e5b4ac6eee9b3e14e65334209387e3d0ae https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/universe/p/python3.14/python3.14-venv_3.14.4-1ubuntu0.2_amd64.deb /opt/python-abi-security/python3.14-venv.deb
 COPY scripts/install-python-abi-security /usr/local/bin/install-python-abi-security
-ADD --checksum=sha256:5b6326f1932cfd7be57130561dc78192f09ed9f58bfbe6606ed0c50510c3b6cd https://archive.ubuntu.com/ubuntu/pool/main/c/ca-certificates/ca-certificates_20260816ubuntu0.26.04.1_all.deb /opt/pasturestack-ca-certificates.deb
+ADD --checksum=sha256:5b6326f1932cfd7be57130561dc78192f09ed9f58bfbe6606ed0c50510c3b6cd https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/c/ca-certificates/ca-certificates_20260816ubuntu0.26.04.1_all.deb /opt/pasturestack-ca-certificates.deb
 RUN set -eux; \
     mkdir -p /tmp/ca-bootstrap /etc/ssl/certs; \
     dpkg-deb --extract /tmp/ca-certificates.deb /tmp/ca-bootstrap; \
@@ -41,6 +48,7 @@ RUN set -eux; \
     rm -f /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: resolute resolute-updates resolute-backports resolute-security\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nSnapshot: no\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/pasturestack-snapshot.sources; \
     printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nAcquire::http::Pipeline-Depth "0";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\nAcquire::https::Verify-Peer "true";\nAcquire::https::Verify-Host "true";\nAcquire::AllowInsecureRepositories "false";\nAPT::Get::AllowUnauthenticated "false";\n' > /etc/apt/apt.conf.d/80pasturestack-snapshot; \
+    bash /usr/local/bin/install-dapper-official-security apt && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         bash \
@@ -67,7 +75,7 @@ RUN set -eux; \
     for package in curl libcurl3t64-gnutls libcurl4t64 libssl3t64 openssl openssl-provider-legacy linux-libc-dev; do \
         case "$package" in \
             curl|libcurl*) expected=8.18.0-1ubuntu2.8 ;; \
-            linux-libc-dev) expected=7.0.0-38.38 ;; \
+            linux-libc-dev) expected=7.0.0-43.43 ;; \
             *) expected=3.5.5-1ubuntu3.7 ;; \
         esac; \
         test "$(dpkg-deb -f "/tmp/${package}.deb" Package)" = "$package" || exit 1; \
@@ -79,7 +87,7 @@ RUN set -eux; \
     for package in curl libcurl3t64-gnutls libcurl4t64 libssl3t64 openssl openssl-provider-legacy linux-libc-dev; do \
         case "$package" in \
             curl|libcurl*) expected=8.18.0-1ubuntu2.8 ;; \
-            linux-libc-dev) expected=7.0.0-38.38 ;; \
+            linux-libc-dev) expected=7.0.0-43.43 ;; \
             *) expected=3.5.5-1ubuntu3.7 ;; \
         esac; \
         test "$(dpkg-query -W -f='${Version}' "$package")" = "$expected" || exit 1; \
@@ -92,6 +100,9 @@ RUN set -eux; \
     test ! -e /usr/share/ca-certificates/mozilla/emSign_ECC_Root_CA_-_G3.crt && \
     rm -f /opt/pasturestack-ca-certificates.deb && \
     sh /usr/local/libexec/pasturestack/install-ubuntu-security-updates /licenses/ubuntu-security-packages.lock /etc/ssl/certs/ca-certificates.crt && \
+    bash /usr/local/bin/install-dapper-official-security brotli && \
+    bash /usr/local/bin/install-dapper-official-security pcre2 && \
+    rm -rf /opt/dapper-official-security && \
     rm -rf /var/lib/apt/lists/* && \
     rm -f /usr/bin/pebble && \
     rm -f /bin/sh && ln -s /bin/bash /bin/sh
@@ -111,7 +122,7 @@ ADD --checksum=sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8
 COPY scripts/install-python-security-tools /usr/local/bin/install-python-security-tools
 COPY scripts/install-dapper-container-tools /usr/local/bin/install-dapper-container-tools
 COPY toolchain/build-buildx /usr/local/libexec/pasturestack/build-buildx
-ENV VIRTUALENV_PIP=26.2.2+pasturestack.1 VIRTUALENV_EXTRA_SEARCH_DIR=/usr/share/python-wheels VIRTUALENV_NO_PERIODIC_UPDATE=1
+ENV VIRTUALENV_PIP=26.2.2+pasturestack.2 VIRTUALENV_EXTRA_SEARCH_DIR=/usr/share/python-wheels VIRTUALENV_NO_PERIODIC_UPDATE=1
 ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm=armv6l GOLANG_ARCH=GOLANG_ARCH_${ARCH} \
     GO_SHA256=GO_SHA256_${ARCH} \
     GOPATH=/go PATH=/opt/tox/bin:/go/bin:/usr/local/go/bin:${PATH} SHELL=/bin/bash \

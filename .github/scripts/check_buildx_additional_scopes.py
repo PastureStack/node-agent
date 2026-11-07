@@ -11,11 +11,11 @@ INPUT_SHAS = {
     'GO-2026-5932': 'f277b0400996200a7d5034c676661cd8cf18adeab1fdc5d0dc369e456ddf1fad',
 }
 PATCH_SHA = '50896e0a5d94c3586c16997cdfd6dc94214a511f7c1493449928d2f34f5e5793'
-CRYPTO_PURL = 'pkg:golang/golang.org/x/crypto@v0.57.0'
+CRYPTO_PURL = 'pkg:golang/golang.org/x/crypto@v0.58.0'
 SCOPES = {
     'CVE-2026-33997': ('github.com/docker/docker', 'v28.5.2+incompatible', shared.PURL),
     'CVE-2026-41568': ('github.com/docker/docker', 'v28.5.2+incompatible', shared.PURL),
-    'GO-2026-5932': ('golang.org/x/crypto', 'v0.57.0', CRYPTO_PURL),
+    'GO-2026-5932': ('golang.org/x/crypto', 'v0.58.0', CRYPTO_PURL),
 }
 
 
@@ -57,9 +57,9 @@ def qualify(data):
     shared.require(not any(p == a or p.startswith(a + '/') for p in packages for a in affected)
                    and not any(package == 'golang.org/x/crypto/openpgp'
                                or package.startswith('golang.org/x/crypto/openpgp/')
-                               or path.startswith('module/golang.org/x/crypto@v0.57.0/openpgp/')
+                               or path.startswith('module/golang.org/x/crypto@v0.58.0/openpgp/')
                                for package, path, _ in files), 'An affected OpenPGP package/file is compiled')
-    shared.require('golang.org/x/crypto v0.57.0' in source['modulesAfter'].splitlines(),
+    shared.require('golang.org/x/crypto v0.58.0' in source['modulesAfter'].splitlines(),
                    'Actual x/crypto module version changed')
     findings = []
     for target, finding in shared.findings(shared.load(source['raw'])):

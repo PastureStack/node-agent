@@ -42,11 +42,91 @@ def violations(report, ledger, repository):
             entry = reviewed.get(key)
             fixed = str(finding.get("FixedVersion") or "").strip()
             if (severity not in ("LOW", "MEDIUM") or fixed
-                    or entry is None or entry["severity"] != severity):
+                    or entry is None or entry["severity"] != severity
+                    or (entry.get("trackingStatus") == "tracked_unfixed"
+                        and finding.get("FixedVersion") not in (None, ""))):
                 errors.append("%s %s@%s severity=%s fixed=%s" % (
                     key[0], key[1], key[2], severity, fixed or "none"))
     return errors
 
+
+
+def merge_tracked_header_unfixed(ledger, tracking, header_ledger, dockerfile):
+    """Register exact unfixed Medium findings; never assert absent vulnerable code."""
+    from datetime import date, datetime, timezone
+    import hashlib
+    import re
+
+    def require(condition, message):
+        if not condition:
+            raise ValueError(message)
+
+    repository = "PastureStack/node-agent"
+    expected_source = {
+        "package": "linux-libc-dev", "version": "7.0.0-43.43",
+        "purl": "pkg:deb/ubuntu/linux-libc-dev@7.0.0-43.43?arch=amd64&distro=ubuntu-26.04",
+        "debSha256": "3a3adc14e3332fc017b1d0e4e39655298a2a977d51db6e80de533ac60137b07f",
+        "debUrl": "https://snapshot.ubuntu.com/ubuntu/20261107T200000Z/pool/main/l/linux/linux-libc-dev_7.0.0-43.43_amd64.deb",
+        "signedIndexSha256": "9c1b9c550cee550b22e5ca08aab25531ac65b573cb65696d78a7d0ac08d03f1d",
+        "inReleaseSha256": "fa034f18b9f668279d313f357b8075dbcf747490ec4d4ad370b472cc84a2c79e",
+    }
+    require(set(tracking) == {"schemaVersion", "repository", "classification", "status", "packageSource",
+                              "officialEvidence", "checkedAt", "nextReview", "scanEvidence", "severity",
+                              "fixedVersion", "ids", "idsSha256", "reason"}, "unexpected tracked header fields")
+    require(ledger.get("repository") == repository
+            and tracking.get("repository") == repository
+            and header_ledger.get("repository") == repository, "tracked header repository mismatch")
+    require(tracking.get("schemaVersion") == 1
+            and tracking.get("classification") == "tracked_unfixed"
+            and tracking.get("status") == "no_official_fix"
+            and tracking.get("severity") == "MEDIUM"
+            and tracking.get("fixedVersion") == "", "unqualified tracked header status")
+    require(tracking.get("packageSource") == expected_source, "tracked header official source changed")
+    require(tracking.get("officialEvidence") == "https://archive.ubuntu.com/ubuntu/dists/resolute-updates/InRelease",
+            "tracked header official evidence changed")
+    require(isinstance(tracking.get("checkedAt"), str) and isinstance(tracking.get("nextReview"), str),
+            "missing tracked header review dates")
+    checked = date.fromisoformat(tracking["checkedAt"])
+    review = date.fromisoformat(tracking["nextReview"])
+    require(checked <= datetime.now(timezone.utc).date() <= review and checked < review,
+            "tracked header review is not current")
+    scan = tracking.get("scanEvidence", {})
+    require(isinstance(scan, dict) and set(scan) == {"status", "originalRunId", "artifactId",
+                                                   "sourceRevision", "sha256", "productQualification"}
+            and scan.get("status") == "ORIGINAL_HEADER_ONLY_SCAN_RECORDED"
+            and type(scan.get("originalRunId")) is int and scan["originalRunId"] > 0
+            and type(scan.get("artifactId")) is int and scan["artifactId"] > 0
+            and re.fullmatch(r"[0-9a-f]{40}", scan.get("sourceRevision") or "")
+            and re.fullmatch(r"[0-9a-f]{64}", scan.get("sha256") or "")
+            and scan.get("productQualification") is False, "missing original header-only scan provenance")
+    ids = tracking.get("ids")
+    require(isinstance(ids, list) and len(ids) <= 302
+            and all(isinstance(identifier, str) and re.fullmatch(r"CVE-[0-9]{4}-[0-9]{4,}", identifier)
+                    for identifier in ids)
+            and ids == sorted(set(ids)), "tracked header ID cohort is not exact and bounded")
+    require(hashlib.sha256(("\n".join(ids) + "\n").encode()).hexdigest() == tracking.get("idsSha256"),
+            "tracked header ID cohort digest changed")
+    require(not set(ids).intersection(header_ledger.get("ids", [])),
+            "tracked unfixed findings must remain separate from code-absent header review")
+    require(header_ledger.get("package") == expected_source["package"]
+            and header_ledger.get("version") == expected_source["version"]
+            and header_ledger.get("purl") == expected_source["purl"], "tracked header boundary changed")
+    expected_add = "ADD --checksum=sha256:%s %s /tmp/linux-libc-dev.deb" % (
+        expected_source["debSha256"], expected_source["debUrl"])
+    require([line for line in dockerfile.splitlines()
+             if line.startswith("ADD ") and "/tmp/linux-libc-dev.deb" in line] == [expected_add],
+            "tracked header recipe does not consume the exact official deb")
+    require(isinstance(tracking.get("reason"), str) and tracking["reason"].strip(), "missing tracking reason")
+    # Keep findings in the raw report. The existing all-severity consumer still
+    # rejects a fixed finding, High/Critical, unknown ID or a different identity.
+    entries = [{"id": identifier, "package": expected_source["package"],
+                "version": expected_source["version"], "purl": expected_source["purl"],
+                "severity": "MEDIUM", "status": "no_official_fix",
+                "officialEvidence": tracking["officialEvidence"], "reason": tracking["reason"],
+                "checkedAt": tracking["checkedAt"], "nextReview": tracking["nextReview"],
+                "trackingStatus": "tracked_unfixed", "debSha256": expected_source["debSha256"]}
+               for identifier in ids]
+    return dict(ledger, unfixed=list(ledger.get("unfixed", [])) + entries)
 
 
 def builder_violations(report, ledger, repository, header_boundary, header_ledger,
@@ -83,18 +163,18 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                     for p in graphs[name].splitlines()) for name, root in roots.items()):
             raise ValueError("missing exact container-tool package graphs")
     has_headers = any(f.get("PkgName") == "linux-libc-dev" for r in results for f in (r.get("Vulnerabilities") or []))
-    if has_headers and header_boundary != {"package": "linux-libc-dev", "version": "7.0.0-38.38",
+    if has_headers and header_boundary != {"package": "linux-libc-dev", "version": "7.0.0-43.43",
                                            "kernel_images": False, "kernel_modules": False}:
         raise ValueError("missing exact installed-header boundary proof")
     if header_ledger.get("repository") != repository:
         raise ValueError("header review repository mismatch")
     if (header_ledger.get("package") != "linux-libc-dev"
-            or header_ledger.get("version") != "7.0.0-38.38"
-            or header_ledger.get("purl") != "pkg:deb/ubuntu/linux-libc-dev@7.0.0-38.38?arch=amd64&distro=ubuntu-26.04"):
+            or header_ledger.get("version") != "7.0.0-43.43"
+            or header_ledger.get("purl") != "pkg:deb/ubuntu/linux-libc-dev@7.0.0-43.43?arch=amd64&distro=ubuntu-26.04"):
         raise ValueError("changed header review boundary")
     header_keys = {(identifier, header_ledger["package"], header_ledger["version"], header_ledger["purl"])
                    for identifier in header_ledger.get("ids", [])}
-    expected_purl = "pkg:deb/ubuntu/linux-libc-dev@7.0.0-38.38?arch=amd64&distro=ubuntu-26.04"
+    expected_purl = "pkg:deb/ubuntu/linux-libc-dev@7.0.0-43.43?arch=amd64&distro=ubuntu-26.04"
     openpgp_absent = False
     if package_graphs:
         if repository not in ("PastureStack/kubernetes-authentication-bridge", "PastureStack/ecr-credential-sync"):
@@ -127,7 +207,7 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
             if buildx_qualification and buildx_scopes.matches(result.get("Target"), finding, buildx_qualification):
                 continue
             is_header = (key in header_keys and key[1] == "linux-libc-dev"
-                         and key[2] == "7.0.0-38.38" and key[3] == expected_purl)
+                         and key[2] == "7.0.0-43.43" and key[3] == expected_purl)
             unfixed = not str(finding.get("FixedVersion") or "").strip()
             if is_header and unfixed:
                 continue
@@ -147,31 +227,54 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                     and docker_proof.get("sourceCommit") == "a7dcaa6fdb6ed04aacbfdc76357fdae01605609e"
                     and len(docker_proof.get("binarySha256", "")) == 64):
                 continue
-            if (unfixed and repository == "PastureStack/node-agent" and node_proof):
+            if (repository == "PastureStack/node-agent" and node_proof):
+                # The exact deprecated-package absence proof is independent of
+                # this one official GoDB fixed marker. Other markers still fail.
+                openpgp_metadata_matches = unfixed or (
+                    finding.get("FixedVersion") == "0.58.1-0.20261009181718-2f1f834330b2"
+                    and finding.get("Severity") == "UNKNOWN"
+                    and (finding.get("DataSource") or {}).get("ID") == "govulndb")
                 daemon = node_proof.get("dockerdOpenpgp", {})
-                if (key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
+                if (openpgp_metadata_matches and key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
                             "pkg:golang/golang.org/x/crypto@v0.58.0")
                         and result.get("Target") == "usr/bin/dockerd"
-                        and daemon.get("binarySha256") == "3a6132d4d99c1437e3422599f802207a3def9ba4de00ec1004a8e40d2740b9b0"
-                        and daemon.get("sourceCommit") == "0367cbeb49b9d98cb0b4f51e95f7b54b4803e76c"
-                        and daemon.get("sourcePackageGraphSha256") == "5b64dcb5265f1d7345e94688a0ee0700887000359cd25cc8f184d88835e79fd4"
+                        and daemon.get("binarySha256") == "4e770837d688825898693db234f1723759b33650013af813eda20c21252ac7ad"
+                        and daemon.get("sourceCommit") == "70efc0e31da3a115fc87574d1b786fa2b867c346"
+                        and daemon.get("sourceArchiveSha256") == "0a58b26c1d14415c24c96b26423d53490d9e869aa26649fd820df8f74aaa6691"
+                        and daemon.get("sourcePackageGraphSha256") == "9548a1b9b79f6dff64fe28ae4f0aac338af14bf84b71c3d1dbf9d1b47b11833f"
                         and daemon.get("cryptoSymbols", 0) > 0
                         and daemon.get("openpgpSymbols") == 0):
                     continue
                 graphs = node_proof.get("containerGraphs", {})
-                if (key == ("GO-2026-5932", "golang.org/x/crypto", "v0.57.0",
-                            "pkg:golang/golang.org/x/crypto@v0.57.0")
+                if (openpgp_metadata_matches and key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
+                            "pkg:golang/golang.org/x/crypto@v0.58.0")
                         and result.get("Target") in ("usr/bin/containerd", "usr/bin/ctr", "usr/bin/containerd-shim-runc-v2")
                         and set(graphs) == {"containerd", "ctr", "containerd-shim-runc-v2", "runc"}
                         and all(graph and not any(p == "golang.org/x/crypto/openpgp" or p.startswith("golang.org/x/crypto/openpgp/") for p in graph.splitlines()) for graph in graphs.values())):
                     continue
                 pip = node_proof.get("pip", {})
-                if (key[0] in ("CVE-2025-66418", "CVE-2025-66471", "CVE-2026-21441", "CVE-2026-1703")
+                if (unfixed and key[0] in ("CVE-2025-66418", "CVE-2025-66471", "CVE-2026-21441", "CVE-2026-1703")
                         and key[1] == "python3-pip-whl" and key[2] == "25.1.1+dfsg-1ubuntu2"
                         and key[3] == "pkg:deb/ubuntu/python3-pip-whl@25.1.1%2Bdfsg-1ubuntu2?arch=all&distro=ubuntu-26.04"
-                        and pip.get("verifiedWheelSha256") == "be5f63d537bbe611dc422fabb6740a44b5997888b592888df5091727f023802a"
-                        and pip.get("pip") == "26.2.2+pasturestack.1"
+                        and pip.get("verifiedWheelSha256") == "2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36"
+                        and pip.get("pip") == "26.2.2+pasturestack.2"
                         and pip.get("urllib3") == "2.8.0" and pip.get("vendorFilesByteCompared") == 299):
+                    continue
+                # PYSEC-2026-196 is fixed in upstream pip 26.1.2. The old
+                # distro seed metadata can qualify only with actual full-core
+                # bytes from this exact patched wheel, never a version alone.
+                if (key == ("CVE-2026-8643", "python3-pip-whl", "25.1.1+dfsg-1ubuntu2",
+                            "pkg:deb/ubuntu/python3-pip-whl@25.1.1%2Bdfsg-1ubuntu2?arch=all&distro=ubuntu-26.04")
+                        and result.get("Class") == "os-pkgs" and result.get("Type") == "ubuntu"
+                        and finding.get("Severity") == "MEDIUM"
+                        and finding.get("FixedVersion") in (None, "", "26.1.2")
+                        and pip.get("verifiedWheelSha256") == "2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36"
+                        and pip.get("pip") == "26.2.2+pasturestack.2"
+                        and pip.get("vendorFilesByteCompared") == 299
+                        and pip.get("vendorInventorySha256") == "6b9e911363afa748740d5a514de1ecf34974645d0fb01dac23546e66d4d0f94c"
+                        and pip.get("pipCoreFilesByteCompared") == 157
+                        and pip.get("pipCoreInventorySha256") == "51be05e205130ecb1655f762f5933177269a9e665d1f4075a8921557998ddce5"
+                        and pip.get("pipCoreFileSetMatched") is True):
                     continue
             copied["Vulnerabilities"].append(finding)
         retained.append(copied)
@@ -209,6 +312,9 @@ if __name__ == "__main__":
                           "containerGraphs": {name: (repo_root / evidence_dir / "container-tools" / (name + "-package-graph.txt")).read_text(encoding="utf-8") for name in ("containerd", "ctr", "containerd-shim-runc-v2", "runc")}}
             node_proof["buildxInput"] = json.loads((repo_root / evidence_dir / "buildx-additional-input.json").read_text(encoding="utf-8"))
             node_proof["buildxQualification"] = json.loads((repo_root / evidence_dir / "buildx-additional-qualification.json").read_text(encoding="utf-8"))
+            tracking = json.loads((repo_root / ".github" / "dapper-header-tracked-unfixed.json").read_text(encoding="utf-8"))
+            ledger = merge_tracked_header_unfixed(ledger, tracking, headers,
+                                                 (repo_root / "Dockerfile.dapper").read_text(encoding="utf-8"))
         failures = builder_violations(report, ledger, args.repository, boundary, headers, graphs, docker_proof, node_proof)
     if failures:
         raise SystemExit("Release vulnerability policy failed:\n" + "\n".join(failures))

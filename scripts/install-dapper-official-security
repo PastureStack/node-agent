@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Official fixed Ubuntu packages, only inside the disposable Dapper image.
+set -euo pipefail
+test "$#" -eq 1
+. /etc/os-release
+test "$ID:$VERSION_ID" = ubuntu:26.04
+root=/opt/dapper-official-security
+case "$1" in
+    apt) packages=(libapt-pkg7.0 apt); expected=3.2.1ubuntu0.1 ;;
+    brotli) packages=(libbrotli1); expected=1.2.0-3ubuntu0.1 ;;
+    pcre2) packages=(libpcre2-8-0); expected=10.46-1ubuntu0.1 ;;
+    *) echo 'Unsupported official build-package phase' >&2; exit 2 ;;
+esac
+scratch=$(mktemp -d)
+trap 'rm -rf -- "$scratch"' EXIT
+dpkg-query -W -f='${binary:Package}\t${db:Status-Status}\n' | LC_ALL=C sort > "$scratch/before"
+for package in "${packages[@]}"; do
+    case "$package" in
+        apt) hash=0de729b8fe0e1c67c04e8e8d5bd6e0420dbd47f75b93f0b71c8e740edc2d5ffc; bytes=1506688 ;;
+        libapt-pkg7.0) hash=94e5d41303265b66af0f8c70ade18bfb77260ad286edee6c8045faddef82b94c; bytes=1139022 ;;
+        libbrotli1) hash=bedeef1cf3268f90338c411cdb0a45b224d0660fd2240f310f380316c8244606; bytes=343132 ;;
+        libpcre2-8-0) hash=44ebbeb6493eacffbc460ca71446959ba86a00b2e23515e4cfb1a5cc317d6672; bytes=257422 ;;
+        *) exit 2 ;;
+    esac
+    file="$root/$package.deb"
+    test "$(wc -c < "$file")" -eq "$bytes"
+    printf '%s  %s\n' "$hash" "$file" | sha256sum -c -
+    test "$(dpkg-deb -f "$file" Package)" = "$package"
+    test "$(dpkg-deb -f "$file" Version)" = "$expected"
+    test "$(dpkg-deb -f "$file" Architecture)" = amd64
+    test "$(dpkg-query -W -f='${db:Status-Status}' "$package")" = installed
+    test "$(dpkg-query -W -f='${Architecture}' "$package")" = amd64
+    # A changed base cannot silently downgrade an already newer package.
+    dpkg --compare-versions "$(dpkg-query -W -f='${Version}' "$package")" le "$expected"
+done
+files=()
+for package in "${packages[@]}"; do files+=("$root/$package.deb"); done
+dpkg -i "${files[@]}"
+for package in "${packages[@]}"; do
+    test "$(dpkg-query -W -f='${Version}' "$package")" = "$expected"
+    test "$(dpkg-query -W -f='${db:Status-Status}' "$package")" = installed
+done
+dpkg-query -W -f='${binary:Package}\t${db:Status-Status}\n' | LC_ALL=C sort > "$scratch/after"
+cmp "$scratch/before" "$scratch/after"
+printf 'DAPPER_OFFICIAL_SECURITY_OK phase=%s version=%s\n' "$1" "$expected"
