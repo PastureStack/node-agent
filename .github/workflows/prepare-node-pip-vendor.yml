@@ -1,0 +1,35 @@
+name: Prepare exact Node pip vendor candidate
+on:
+  push:
+    branches:
+      - prep/node-pip-vendor-*
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    if: github.repository == 'PastureStack/node-agent' && startsWith(github.ref, 'refs/heads/prep/')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Build two official-source pure Python candidates
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          set -euo pipefail
+          python3.12 --version
+          python3.12 scripts/pip-security/build-pip-overlay.py \
+            --materialize-candidate --work "$RUNNER_TEMP/pip-preseal-work" \
+            --output "$RUNNER_TEMP/pip-preseal-evidence"
+          python3.12 -c 'import json,sys; assert json.load(open(sys.argv[1]))["status"] == "CANDIDATE_NOT_QUALIFIED"' "$RUNNER_TEMP/pip-preseal-evidence/build-evidence.json"
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/pip-preseal-evidence/preparation-source.txt"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-pip-candidate-${{ github.sha }}
+          path: ${{ runner.temp }}/pip-preseal-evidence/
+          if-no-files-found: error
+          retention-days: 14
