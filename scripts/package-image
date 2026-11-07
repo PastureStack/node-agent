@@ -32,20 +32,20 @@ cp scripts/install-ubuntu-security-updates "$tmpdir/"
 curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
     --retry 2 --connect-timeout 10 --max-time 120 \
     -o "$tmpdir/ca-certificates.deb" \
-    https://archive.ubuntu.com/ubuntu/pool/main/c/ca-certificates/ca-certificates_20260816ubuntu0.26.04.1_all.deb
+    https://snapshot.ubuntu.com/ubuntu/20261104T000000Z/pool/main/c/ca-certificates/ca-certificates_20260816ubuntu0.26.04.1_all.deb
 printf '%s  %s\n' 5b6326f1932cfd7be57130561dc78192f09ed9f58bfbe6606ed0c50510c3b6cd \
     "$tmpdir/ca-certificates.deb" | sha256sum --check
 
 curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
     --retry 2 --connect-timeout 10 --max-time 120 \
     -o "$tmpdir/libssl3t64.deb" \
-    https://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl3t64_3.5.5-1ubuntu3.7_amd64.deb
+    https://snapshot.ubuntu.com/ubuntu/20261023T000000Z/pool/main/o/openssl/libssl3t64_3.5.5-1ubuntu3.7_amd64.deb
 printf '%s  %s\n' 3ff73e121f6cd4f19e80ab4329dfd914108b3936c9db3708200203a9b245b34d \
     "$tmpdir/libssl3t64.deb" | sha256sum --check
 curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
     --retry 2 --connect-timeout 10 --max-time 120 \
     -o "$tmpdir/openssl-provider-legacy.deb" \
-    https://security.ubuntu.com/ubuntu/pool/main/o/openssl/openssl-provider-legacy_3.5.5-1ubuntu3.7_amd64.deb
+    https://snapshot.ubuntu.com/ubuntu/20261023T000000Z/pool/main/o/openssl/openssl-provider-legacy_3.5.5-1ubuntu3.7_amd64.deb
 printf '%s  %s\n' 51cf418571059831096abd40e0bd5debaa1ae48a6f8d87d9e4e5f7f12aa4db52 \
     "$tmpdir/openssl-provider-legacy.deb" | sha256sum --check
 
