@@ -49,6 +49,22 @@ curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
 printf '%s  %s\n' 51cf418571059831096abd40e0bd5debaa1ae48a6f8d87d9e4e5f7f12aa4db52 \
     "$tmpdir/openssl-provider-legacy.deb" | sha256sum --check
 
+# Same qualified official APT pair as the builder; include it in the runtime context.
+curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+    --retry 2 --connect-timeout 10 --max-time 120 \
+    -o "$tmpdir/apt.deb" \
+    https://snapshot.ubuntu.com/ubuntu/20261107T000000Z/pool/main/a/apt/apt_3.2.1ubuntu0.1_amd64.deb
+test "$(wc -c < "$tmpdir/apt.deb")" -eq 1506688
+printf '%s  %s\n' 0de729b8fe0e1c67c04e8e8d5bd6e0420dbd47f75b93f0b71c8e740edc2d5ffc \
+    "$tmpdir/apt.deb" | sha256sum --check
+curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+    --retry 2 --connect-timeout 10 --max-time 120 \
+    -o "$tmpdir/libapt-pkg7.0.deb" \
+    https://snapshot.ubuntu.com/ubuntu/20261107T000000Z/pool/main/a/apt/libapt-pkg7.0_3.2.1ubuntu0.1_amd64.deb
+test "$(wc -c < "$tmpdir/libapt-pkg7.0.deb")" -eq 1139022
+printf '%s  %s\n' 94e5d41303265b66af0f8c70ade18bfb77260ad286edee6c8045faddef82b94c \
+    "$tmpdir/libapt-pkg7.0.deb" | sha256sum --check
+
 docker build \
     --network="${DOCKER_BUILD_NETWORK:-default}" \
     --build-arg PASTURESTACK_IMAGE_VERSION="${tag}" \
