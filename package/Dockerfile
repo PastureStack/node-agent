@@ -3,7 +3,7 @@ FROM ghcr.io/pasturestack/ubuntu-security-backports:v0.1.0@sha256:2742a3d429e4e1
 FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b AS certificates
 COPY ca-certificates.deb /tmp/ca-certificates.deb
 RUN set -eu; \
-    test "$(dpkg-deb -f /tmp/ca-certificates.deb Version)" = 20260816ubuntu0.26.04.1; \
+    test "$(dpkg-deb -f /tmp/ca-certificates.deb Version)" = 20260816ubuntu0.26.04.2; \
     dpkg-deb --extract /tmp/ca-certificates.deb /ca; \
     mkdir -p /out; \
     find /ca/usr/share/ca-certificates -type f -name '*.crt' | LC_ALL=C sort | \
