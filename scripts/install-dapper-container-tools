@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build-only tools: keep containerd 2.2 and runc 1.4 compatibility branches.
 set -euo pipefail
-test "$(go env GOVERSION)" = go1.27.3
+test "$(go env GOVERSION)" = go1.27.4
 test "$HOST_ARCH" = amd64
 work=$(mktemp -d /tmp/node-container-tools.XXXXXX)
 trap 'rm -rf -- "$work"' EXIT

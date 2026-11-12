@@ -44,7 +44,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.validation_scope == 'host-disk'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.27.3
+          go-version: 1.27.4
           check-latest: false
           cache: false
 
@@ -52,7 +52,7 @@ jobs:
         id: package
         env:
           CROSS: "1"
-          VERSION_OVERRIDE: v0.13.35
+          VERSION_OVERRIDE: v0.13.36
           VALIDATION_SCOPE: ${{ inputs.validation_scope || 'full' }}
         run: |
           set -euo pipefail
@@ -64,7 +64,7 @@ jobs:
               export GOTOOLCHAIN=local GOTELEMETRY=off GOWORK=off
               export GOFLAGS=-mod=vendor GOPROXY=off GOSUMDB=off
               export GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0
-              test "$(go version)" = 'go version go1.27.3 linux/amd64'
+              test "$(go version)" = 'go version go1.27.4 linux/amd64'
               test -z "$(gofmt -l core/hostinfo/disk_info_linux.go core/hostinfo/disk_info_linux_test.go)"
               go test -count=1 -v ./core/hostinfo ./core/ping
               bash scripts/build
@@ -76,7 +76,7 @@ jobs:
               ;;
           esac
           linux_asset="dist/artifacts/node-agent-0.13.35.tar.gz"
-          windows_asset="dist/artifacts/node-agent-0.13.35-windows-amd64.zip"
+          windows_asset="dist/artifacts/node-agent-0.13.36-windows-amd64.zip"
           test -s "$linux_asset"
           test -s "$windows_asset"
           gzip -t "$linux_asset"
@@ -93,7 +93,7 @@ jobs:
             cd dist/artifacts
             sha256sum \
               node-agent-0.13.35.tar.gz \
-              node-agent-0.13.35-windows-amd64.zip >SHA256SUMS
+              node-agent-0.13.36-windows-amd64.zip >SHA256SUMS
             sha256sum -c SHA256SUMS
           )
           printf 'NODE_AGENT_VALIDATION_OK source=%s version=%s scope=%s artifacts=linux,windows\n' \
@@ -102,10 +102,10 @@ jobs:
       - name: Retain reviewed release candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: node-agent-0.13.35
+          name: node-agent-0.13.36
           path: |
             dist/artifacts/node-agent-0.13.35.tar.gz
-            dist/artifacts/node-agent-0.13.35-windows-amd64.zip
+            dist/artifacts/node-agent-0.13.36-windows-amd64.zip
             dist/artifacts/SHA256SUMS
           if-no-files-found: error
           retention-days: 30

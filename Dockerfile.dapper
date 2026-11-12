@@ -49,7 +49,7 @@ RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: resolute resolute-updates resolute-backports resolute-security\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nSnapshot: no\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/pasturestack-snapshot.sources; \
     printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nAcquire::http::Pipeline-Depth "0";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\nAcquire::https::Verify-Peer "true";\nAcquire::https::Verify-Host "true";\nAcquire::AllowInsecureRepositories "false";\nAPT::Get::AllowUnauthenticated "false";\n' > /etc/apt/apt.conf.d/80pasturestack-snapshot; \
     bash /usr/local/bin/install-dapper-official-security apt && \
-    apt-get update && \
+    apt-get update --error-on=any && \
     apt-get install -y --no-install-recommends \
         bash \
         busybox-static \
@@ -109,9 +109,9 @@ RUN set -eux; \
 
 RUN git config --system --add safe.directory '*'
 
-ARG GO_VERSION=1.27.3
-ARG GO_SHA256_amd64=65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40
-ARG GO_SHA256_arm=d6f4e11dd7157030d7ac11c51c8f73201a2db932d593c3106b1da11cc32bfdf8
+ARG GO_VERSION=1.27.4
+ARG GO_SHA256_amd64=7226736c2339719cda28fbf3a54d71aa63bcefe376e98cef00034268dab24840
+ARG GO_SHA256_arm=e50964c41c6e187375387939e2f380de7250eba44e2259dfeb75c540d9d585c3
 ARG SETUPTOOLS_VERSION=84.1.0
 ARG WHEEL_VERSION=0.47.0
 ARG TOX_VERSION=4.57.2

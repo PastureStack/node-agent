@@ -38,7 +38,7 @@ jobs:
           set -euo pipefail
           test -z "$(git status --porcelain)"
           git merge-base --is-ancestor eb6e43caaa32f8263fc33aa6044ff6d19f17e2f8 HEAD
-          grep -Fq 'VERSION_OVERRIDE: v0.13.35' .github/workflows/validate.yml
+          grep -Fq 'VERSION_OVERRIDE: v0.13.36' .github/workflows/validate.yml
           grep -Fq 'SHA256SUMS' scripts/package
           grep -Fq 'bash scripts/verify-package "$linux_asset"' .github/workflows/validate.yml
           grep -Fq 'bash scripts/verify-package dist/artifacts/node-agent-0.13.35.tar.gz' .github/workflows/security-release-gate.yml
@@ -46,7 +46,7 @@ jobs:
       - name: Install the release Go toolchain
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.27.3
+          go-version: 1.27.4
           check-latest: false
           cache: false
 
@@ -68,7 +68,7 @@ jobs:
           export GOFLAGS=-mod=vendor
           mkdir -p "$GITHUB_WORKSPACE/bin"
           CGO_ENABLED=0 go build -trimpath -tags 'netgo osusergo' \
-            -ldflags='-w -s -X main.VERSION=v0.13.35' \
+            -ldflags='-w -s -X main.VERSION=v0.13.36' \
             -o "$GITHUB_WORKSPACE/bin/node-agent" ./
 
       - name: Analyze without publishing temporary alerts
