@@ -44,7 +44,14 @@ tar -xzf "$work/cli.tgz" --strip-components=1 -C "$work/cli"
     cd "$work/cli"
     cp vendor.mod go.mod
     cp vendor.sum go.sum
-    export GOFLAGS=-mod=vendor GOPROXY=off CGO_ENABLED=1
+    export CGO_ENABLED=1
+    go get golang.org/x/net@v0.62.0
+    go mod download
+    go mod verify
+    test "$(go list -m -f '{{.Version}}' golang.org/x/net)" = v0.62.0
+    cp go.mod "$proof/docker-cli.go.mod"
+    cp go.sum "$proof/docker-cli.go.sum"
+    export GOPROXY=off
     go build -trimpath -buildvcs=false -tags 'grpcnotrace osusergo netgo' \
         -ldflags '-X github.com/docker/cli/cli/version.GitCommit=5457199 -X github.com/docker/cli/cli/version.Version=29.9.3 -linkmode external -extldflags=-static' \
         -o /usr/bin/docker ./cmd/docker
@@ -52,6 +59,7 @@ tar -xzf "$work/cli.tgz" --strip-components=1 -C "$work/cli"
 for tool in docker dockerd docker-proxy; do
     test "$(go version "/usr/bin/$tool" | awk '{print $2}')" = go1.27.4
 done
+go version -m /usr/bin/docker | awk '$1 == "dep" && $2 == "golang.org/x/net" && $3 == "v0.62.0" { found = 1 } END { exit !found }'
 fetch https://codeload.github.com/containerd/containerd/tar.gz/991ca6a8ca58b47346a42093210099e090bc6c1f \
     "$work/containerd.tgz" 0962ede134cea36107b0cec0ce152bcf47f1bfbd8945bc3b839a2456a389b077
 fetch https://codeload.github.com/opencontainers/runc/tar.gz/bb14dabeb7185bb72c8c86735d090dcb20f36587 \

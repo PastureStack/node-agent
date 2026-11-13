@@ -11,7 +11,7 @@ RUN set -eu; \
     test -s /out/ca-certificates.crt; \
     test ! -e /ca/usr/share/ca-certificates/mozilla/emSign_ECC_Root_CA_-_G3.crt
 
-FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b
+FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b AS qualified_backports
 
 COPY --from=certificates /out/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=certificates /ca/usr/share/doc/ca-certificates/ /licenses/ca-certificates/
@@ -92,5 +92,32 @@ RUN --mount=from=ubuntu_security_backports,source=/out,target=/opt/pasturestack/
     done; \
     dpkg-query -W -f='${binary:Package}\t${Version}\n' | LC_ALL=C sort > /usr/share/pasturestack/ubuntu-security-packages.tsv; \
     rm -f /var/cache/ldconfig/aux-cache
+
+FROM scratch AS official_glibc
+ADD --checksum=sha256:be83aefc14597fba683031a520f303950a7338b95d74decbe625faa51c49933e https://security.ubuntu.com/ubuntu/pool/main/g/glibc/libc6_2.43-2ubuntu2.7_amd64.deb /tmp/official-glibc/libc6.deb
+ADD --checksum=sha256:c0393ea4fa3c45cefe0351db369d3a4a459edc8045856f2e3612ca17e77b2797 https://security.ubuntu.com/ubuntu/pool/main/g/glibc/libc-bin_2.43-2ubuntu2.7_amd64.deb /tmp/official-glibc/libc-bin.deb
+ADD --checksum=sha256:408ba056d39651c2489b59522a614276d7a96020c6a401e73cd0da7d771764b0 https://security.ubuntu.com/ubuntu/pool/main/g/glibc/libc-gconv-modules-extra_2.43-2ubuntu2.7_amd64.deb /tmp/official-glibc/libc-gconv-modules-extra.deb
+FROM qualified_backports AS runtime
+RUN --mount=from=official_glibc,source=/tmp/official-glibc,target=/tmp/official-glibc,ro \
+    set -eux; \
+    for package in libc6 libc-bin libc-gconv-modules-extra; do \
+        archive="/tmp/official-glibc/$package.deb"; \
+        test "$(dpkg-deb -f "$archive" Package)" = "$package"; \
+        test "$(dpkg-deb -f "$archive" Source)" = glibc; \
+        test "$(dpkg-deb -f "$archive" Architecture)" = amd64; \
+        test "$(dpkg-deb -f "$archive" Version)" = 2.43-2ubuntu2.7; \
+        dpkg --compare-versions "$(dpkg-query -W -f='${Version}' "$package")" lt 2.43-2ubuntu2.7; \
+    done; \
+    dpkg --path-include='/usr/share/doc/libc6/*' --path-include='/usr/share/man/man1/getconf.1.gz' \
+        --path-include='/usr/share/man/man1/tzselect.1.gz' --install /tmp/official-glibc/*.deb; \
+    audit="$(dpkg --audit)"; \
+    test -z "$audit"; \
+    for package in libc6 libc-bin libc-gconv-modules-extra; do \
+        integrity="$(dpkg --verify "$package")"; \
+        test -z "$integrity"; \
+    done; \
+    getent hosts localhost >/dev/null; \
+    rm -f /var/cache/ldconfig/aux-cache /var/log/dpkg.log; \
+    dpkg-query -W -f='${binary:Package}\t${Version}\n' | LC_ALL=C sort > /usr/share/pasturestack/ubuntu-security-packages.tsv
 
 CMD ["node-agent"]

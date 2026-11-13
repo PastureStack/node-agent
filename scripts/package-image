@@ -65,6 +65,14 @@ test "$(wc -c < "$tmpdir/libapt-pkg7.0.deb")" -eq 1139022
 printf '%s  %s\n' 94e5d41303265b66af0f8c70ade18bfb77260ad286edee6c8045faddef82b94c \
     "$tmpdir/libapt-pkg7.0.deb" | sha256sum --check
 
+if [ "${CHECK_QUALIFIED_BACKPORTS:-0}" = 1 ]; then
+    docker build --target qualified_backports \
+        --network="${DOCKER_BUILD_NETWORK:-default}" \
+        --build-arg PASTURESTACK_IMAGE_VERSION="${tag}" \
+        -t "${image_name}:${tag}-backports" \
+        "$tmpdir"
+fi
+
 docker build \
     --network="${DOCKER_BUILD_NETWORK:-default}" \
     --build-arg PASTURESTACK_IMAGE_VERSION="${tag}" \
