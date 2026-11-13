@@ -18,7 +18,7 @@ def fixture():
     before = {'github.com/docker/docker': 'v28.5.2+incompatible', 'github.com/klauspost/compress': 'v1.20.1', 'github.com/moby/go-archive': 'v0.2.0', 'golang.org/x/crypto': 'v0.57.0', 'golang.org/x/net': 'v0.59.0', 'golang.org/x/sync': 'v0.23.0', 'golang.org/x/sys': 'v0.48.0', 'golang.org/x/telemetry': 'v0.0.0-20260811182544-a038080d80e5', 'golang.org/x/term': 'v0.46.0', 'golang.org/x/text': 'v0.42.0', 'golang.org/x/tools': 'v0.49.0'}
     checks = [{'config': {'scanner_name': 'govulncheck', 'scanner_version': 'v1.9.0',
                           'scan_mode': 'source', 'scan_level': 'package'}},
-              {'SBOM': {'go_version': 'go1.27.3', 'roots': [guard.MAIN],
+              {'SBOM': {'go_version': 'go1.27.4', 'roots': [guard.MAIN],
                         'modules': [{'path': k, 'version': v} for k, v in modules.items()]}}]
     checks.extend({'osv': {'id': identifier}} for identifier in sorted(guard.IDS))
     # Legacy module presence is expected; imported/called daemon code is not.
@@ -37,7 +37,7 @@ def fixture():
         'files': f'{guard.NAMES}\t{guard.NAME_FILE}\t{guard.NAME_SHA}\n',
         'modulesBefore': ''.join(f'{k} {v}\n' for k, v in before.items()),
         'modulesAfter': ''.join(f'{k} {v}\n' for k, v in modules.items()),
-        'buildInfo': 'docker-buildx: go1.27.3\n' + ''.join(f'\tdep\t{k}\t{v}\th1:example\n' for k, v in modules.items())
+        'buildInfo': 'docker-buildx: go1.27.4\n' + ''.join(f'\tdep\t{k}\t{v}\th1:example\n' for k, v in modules.items())
                      + '\tbuild\tGOOS=linux\n\tbuild\tGOARCH=amd64\n\tbuild\tCGO_ENABLED=0\n',
         'version': f"github.com/docker/buildx {guard.PINS['downstreamVersion']} {guard.PINS['sourceCommit']}\n",
         'sourceCheck': '\n'.join(json.dumps(c) for c in checks),
@@ -69,7 +69,7 @@ class BuildxEvidenceTests(unittest.TestCase):
         for field, old in [('binding', guard.PINS['sourceCommit']),
                            ('binding', guard.PINS['sourceArchiveSha256']),
                            ('binding', guard.PINS['updatedGoModSha256']),
-                           ('binarySha256', 'a' * 64), ('buildInfo', 'go1.27.3'),
+                           ('binarySha256', 'a' * 64), ('buildInfo', 'go1.27.4'),
                            ('buildInfo', 'GOARCH=amd64'), ('buildInfo', 'v0.62.0')]:
             with self.subTest(field=field, old=old):
                 data = fixture(); data[field] = data[field].replace(old, 'wrong', 1)
@@ -104,7 +104,7 @@ class BuildxEvidenceTests(unittest.TestCase):
     def test_incomplete_or_other_program_source_scan_rejected(self):
         for old, new in [('"source"', '"binary"'), ('"package"', '"module"'),
                          ('"SBOM"', '"sbom"'),
-                         (guard.MAIN, 'example.org/other'), ('go1.27.3', 'go1.26.10'),
+                         (guard.MAIN, 'example.org/other'), ('go1.27.4', 'go1.26.10'),
                          ('GO-2026-6253', 'GO-MISSING')]:
             data = fixture(); data['sourceCheck'] = data['sourceCheck'].replace(old, new)
             with self.subTest(old=old), self.assertRaises(ValueError):

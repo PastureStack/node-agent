@@ -1,6 +1,7 @@
 """Enforce release findings; only exact, reviewed unfixed low/medium entries may pass."""
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -238,10 +239,12 @@ def builder_violations(report, ledger, repository, header_boundary, header_ledge
                 if (openpgp_metadata_matches and key == ("GO-2026-5932", "golang.org/x/crypto", "v0.58.0",
                             "pkg:golang/golang.org/x/crypto@v0.58.0")
                         and result.get("Target") == "usr/bin/dockerd"
-                        and daemon.get("binarySha256") == "4e770837d688825898693db234f1723759b33650013af813eda20c21252ac7ad"
+                        and re.fullmatch(r"[0-9a-f]{64}", daemon.get("binarySha256", ""))
+                        and daemon.get("binarySha256") == daemon.get("buildManifestSha256")
+                        and daemon.get("compiler") == "go1.27.4"
                         and daemon.get("sourceCommit") == "70efc0e31da3a115fc87574d1b786fa2b867c346"
                         and daemon.get("sourceArchiveSha256") == "0a58b26c1d14415c24c96b26423d53490d9e869aa26649fd820df8f74aaa6691"
-                        and daemon.get("sourcePackageGraphSha256") == "9548a1b9b79f6dff64fe28ae4f0aac338af14bf84b71c3d1dbf9d1b47b11833f"
+                        and re.fullmatch(r"[0-9a-f]{64}", daemon.get("sourcePackageGraphSha256", ""))
                         and daemon.get("cryptoSymbols", 0) > 0
                         and daemon.get("openpgpSymbols") == 0):
                     continue

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Build-only tools: keep containerd 2.2 and runc 1.4 compatibility branches.
 set -euo pipefail
-test "$(go env GOVERSION)" = go1.27.3
+test "$(go env GOVERSION)" = go1.27.4
 test "$HOST_ARCH" = amd64
 work=$(mktemp -d /tmp/node-container-tools.XXXXXX)
 trap 'rm -rf -- "$work"' EXIT
 export GOTOOLCHAIN=local GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org
 export GOFLAGS=-mod=mod GOCACHE="$work/cache" GOMODCACHE="$work/modules"
 proof=/licenses/container-tools
-mkdir -p "$proof" "$work/containerd" "$work/runc"
+mkdir -p "$proof" "$work/containerd" "$work/runc" "$work/moby" "$work/cli"
 fetch() {
     curl --fail --silent --show-error --location --retry 5 "$1" -o "$2"
     printf '%s  %s\n' "$3" "$2" | sha256sum -c -
@@ -21,13 +21,45 @@ fetch https://raw.githubusercontent.com/docker/cli/5457199aa57c45e990c59c89cab5f
     "$proof/docker-cli-NOTICE" a8c869fbda819afb8d80e0ac19bac52e766bc6c19cb38cf94f52d64c4be2aab6
 fetch https://download.docker.com/linux/static/stable/x86_64/docker-29.9.3.tgz \
     "$work/docker.tgz" 3fb5d1f13014c18cc54945bc177c58a9056a482dada031e17d12cf2e6922c973
-tar -xzf "$work/docker.tgz" -C "$work" docker/docker docker/dockerd docker/docker-proxy docker/docker-init
-for tool in docker dockerd docker-proxy docker-init; do
-    install -m 0755 "$work/docker/$tool" "/usr/bin/$tool"
+# docker-init is native C; retain the verified upstream release payload.
+tar -xzf "$work/docker.tgz" -C "$work" docker/docker-init
+install -m 0755 "$work/docker/docker-init" /usr/bin/docker-init
+fetch https://codeload.github.com/moby/moby/tar.gz/70efc0e31da3a115fc87574d1b786fa2b867c346 \
+    "$work/moby.tgz" 0a58b26c1d14415c24c96b26423d53490d9e869aa26649fd820df8f74aaa6691
+fetch https://codeload.github.com/docker/cli/tar.gz/5457199aa57c45e990c59c89cab5f02b817238d7 \
+    "$work/cli.tgz" 36d502ba53623c50c51fe44f916aeff4c4051b1132aabde2e8982895d0361651
+tar -xzf "$work/moby.tgz" --strip-components=1 -C "$work/moby"
+tar -xzf "$work/cli.tgz" --strip-components=1 -C "$work/cli"
+(
+    cd "$work/moby"
+    export GOFLAGS=-mod=vendor GOPROXY=off
+    tags='netgo osusergo static_build nri_no_wasm journald'
+    flags='-w -X github.com/moby/moby/v2/dockerversion.Version=29.9.3 -X github.com/moby/moby/v2/dockerversion.GitCommit=70efc0e -extldflags=-static'
+    CGO_ENABLED=1 go list -deps -tags "$tags" ./cmd/dockerd > "$proof/docker-daemon-package-graph.txt"
+    if grep -Eq '^golang.org/x/crypto/openpgp(/|$)' "$proof/docker-daemon-package-graph.txt"; then exit 1; fi
+    CGO_ENABLED=1 go build -trimpath -buildvcs=false -tags "$tags" -ldflags "$flags" -o /usr/bin/dockerd ./cmd/dockerd
+    CGO_ENABLED=0 go build -trimpath -buildvcs=false -tags "$tags" -ldflags "$flags" -o /usr/bin/docker-proxy ./cmd/docker-proxy
+)
+(
+    cd "$work/cli"
+    cp vendor.mod go.mod
+    cp vendor.sum go.sum
+    export CGO_ENABLED=1
+    go get golang.org/x/net@v0.62.0
+    go mod download
+    go mod verify
+    test "$(go list -m -f '{{.Version}}' golang.org/x/net)" = v0.62.0
+    cp go.mod "$proof/docker-cli.go.mod"
+    cp go.sum "$proof/docker-cli.go.sum"
+    export GOPROXY=off
+    go build -trimpath -buildvcs=false -tags 'grpcnotrace osusergo netgo' \
+        -ldflags '-X github.com/docker/cli/cli/version.GitCommit=5457199 -X github.com/docker/cli/cli/version.Version=29.9.3 -linkmode external -extldflags=-static' \
+        -o /usr/bin/docker ./cmd/docker
+)
+for tool in docker dockerd docker-proxy; do
+    test "$(go version "/usr/bin/$tool" | awk '{print $2}')" = go1.27.4
 done
-echo '4e770837d688825898693db234f1723759b33650013af813eda20c21252ac7ad  /usr/bin/dockerd' | sha256sum -c -
-echo '3ac6daa3aff1afd1c0c673fa216fb592743c75ea406daa4ade413d933bc06f92  /usr/bin/docker' | sha256sum -c -
-echo 'b43447ed8f1af53975505c63171c4b2cfaf3c8a5d6a98d92ba2803962afe2389  /usr/bin/docker-proxy' | sha256sum -c -
+go version -m /usr/bin/docker | awk '$1 == "dep" && $2 == "golang.org/x/net" && $3 == "v0.62.0" { found = 1 } END { exit !found }'
 fetch https://codeload.github.com/containerd/containerd/tar.gz/991ca6a8ca58b47346a42093210099e090bc6c1f \
     "$work/containerd.tgz" 0962ede134cea36107b0cec0ce152bcf47f1bfbd8945bc3b839a2456a389b077
 fetch https://codeload.github.com/opencontainers/runc/tar.gz/bb14dabeb7185bb72c8c86735d090dcb20f36587 \

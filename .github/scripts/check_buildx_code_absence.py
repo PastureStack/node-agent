@@ -21,7 +21,7 @@ PINS = {
     'sourceArchiveSha256': 'c5c810b083ed3725f7d4299ba01505b5891d164cf81c3398ea4c3b27a3b71149',
     'originalGoModSha256': 'a93029abb94e88ddaa532ddeaab4802259a1025408f1eac417a9886e140067ef',
     'updatedGoModSha256': '8c502e42f21c8558e9e900eb1a231adbdd819f74324834ee18f6d38eb64394c1',
-    'goVersion': 'go1.27.3', 'goos': 'linux',
+    'goVersion': 'go1.27.4', 'goos': 'linux',
 }
 IDS = {'GO-2026-5617', 'GO-2026-5746', 'GO-2026-6253', 'GO-2026-6611'}
 OSV_PINS = {
@@ -115,7 +115,7 @@ def source_check(data):
         require([s for s in before if s.startswith(module + ' ')] == [module + ' ' + old]
                 and [s for s in after if s.startswith(module + ' ')] == [module + ' ' + new], 'Wrong fixed module version')
     info = data['buildInfo'].splitlines()
-    require(info and info[0].endswith(': go1.27.3'), 'Actual binary has a different compiler')
+    require(info and info[0].endswith(': go1.27.4'), 'Actual binary has a different compiler')
     deps = {}
     settings = {}
     for line in info[1:]:
@@ -140,7 +140,7 @@ def source_check(data):
             and configs[0]['scanner_version'] == 'v1.9.0' and configs[0]['scan_mode'] == 'source'
             and configs[0]['scan_level'] == 'package', 'Native package source check missing or replaced by stripped-binary fallback')
     sboms = [x['SBOM'] for x in checks if 'SBOM' in x]
-    require(len(sboms) == 1 and sboms[0]['go_version'] == 'go1.27.3' and sboms[0]['roots'] == [MAIN],
+    require(len(sboms) == 1 and sboms[0]['go_version'] == 'go1.27.4' and sboms[0]['roots'] == [MAIN],
             'Native source check did not inspect this Buildx program')
     scanned = unique_pairs((m['path'], m.get('version', '')) for m in sboms[0]['modules'])
     require(all(scanned.get(k) == v for k, v in deps.items()), 'Source check module versions differ from the binary')

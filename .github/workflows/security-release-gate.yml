@@ -19,9 +19,9 @@ jobs:
     timeout-minutes: 120
     env:
       DAPPER_IMAGE: pasturestack/node-agent-dapper:${{ github.sha }}
-      RUNTIME_IMAGE: pasturestack/node-agent:v0.13.35
+      RUNTIME_IMAGE: pasturestack/node-agent:v0.13.36
       TRIVY_IMAGE: aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
-      VERSION_OVERRIDE: v0.13.35
+      VERSION_OVERRIDE: v0.13.36
     steps:
       - name: Check out candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,8 +37,8 @@ jobs:
           git merge-base --is-ancestor 73e3a7c5f438dbda42c4078885a66e6f156aa731 HEAD
           mkdir -p evidence
           git rev-parse HEAD > evidence/source-revision.txt
-          sha256sum Dockerfile.dapper package/Dockerfile tests/requirements.lock \
-            scripts/package scripts/verify-package \
+          sha256sum Makefile Dockerfile.dapper package/Dockerfile tests/requirements.lock \
+            scripts/package scripts/package-image scripts/verify-package .github/scripts/verify-official-glibc.py \
             .github/workflows/codeql-verification.yml \
             .github/workflows/security-release-gate.yml \
             security/dapper.openvex.json .github/dapper-header-tracked-unfixed.json \
@@ -68,26 +68,27 @@ jobs:
         run: |
           set -euo pipefail
           CROSS=1 VERSION_OVERRIDE="$VERSION_OVERRIDE" make DAPPER_IMAGE="$DAPPER_IMAGE" ci
-          make DAPPER_IMAGE="$DAPPER_IMAGE" IMAGE_NAME=pasturestack/node-agent \
-            TAG=v0.13.35 VERSION_OVERRIDE="$VERSION_OVERRIDE" package-image
-          test -s dist/artifacts/node-agent-0.13.35.tar.gz
-          test -s dist/artifacts/node-agent-0.13.35-windows-amd64.zip
+          CHECK_QUALIFIED_BACKPORTS=1 make DAPPER_IMAGE="$DAPPER_IMAGE" IMAGE_NAME=pasturestack/node-agent \
+            TAG=v0.13.36 VERSION_OVERRIDE="$VERSION_OVERRIDE" package-image
+          test -s dist/artifacts/node-agent-0.13.36.tar.gz
+          test -s dist/artifacts/node-agent-0.13.36-windows-amd64.zip
           test "$(cat dist/image)" = "$RUNTIME_IMAGE"
-          gzip -t dist/artifacts/node-agent-0.13.35.tar.gz
-          bash scripts/verify-package dist/artifacts/node-agent-0.13.35.tar.gz
-          unzip -t dist/artifacts/node-agent-0.13.35-windows-amd64.zip
+          docker image inspect "$RUNTIME_IMAGE-backports" --format "{{.Id}}" >/dev/null
+          gzip -t dist/artifacts/node-agent-0.13.36.tar.gz
+          bash scripts/verify-package dist/artifacts/node-agent-0.13.36.tar.gz
+          unzip -t dist/artifacts/node-agent-0.13.36-windows-amd64.zip
           (
             cd dist/artifacts
-            sha256sum node-agent-0.13.35.tar.gz node-agent-0.13.35-windows-amd64.zip > SHA256SUMS
+            sha256sum node-agent-0.13.36.tar.gz node-agent-0.13.36-windows-amd64.zip > SHA256SUMS
             sha256sum -c SHA256SUMS
           )
-          sha256sum dist/artifacts/node-agent-0.13.35.tar.gz \
-            dist/artifacts/node-agent-0.13.35-windows-amd64.zip \
+          sha256sum dist/artifacts/node-agent-0.13.36.tar.gz \
+            dist/artifacts/node-agent-0.13.36-windows-amd64.zip \
             bin/node-agent bin/windows/amd64/node-agent.exe > evidence/product-artifacts.sha256
           docker image inspect "$RUNTIME_IMAGE" > evidence/runtime-image-inspect.json
           docker run --rm --entrypoint /usr/bin/node-agent "$RUNTIME_IMAGE" --version \
             > evidence/runtime-version.txt
-          grep -Fxq 'node-agent version v0.13.35' evidence/runtime-version.txt
+          grep -Fxq 'node-agent version v0.13.36' evidence/runtime-version.txt
 
       - name: Verify reproducible Linux binary
         shell: bash
@@ -99,11 +100,11 @@ jobs:
           cmp /tmp/node-agent.first bin/node-agent
           docker run --rm --entrypoint go -v "$PWD:/work:ro" "$DAPPER_IMAGE" \
             version -m /work/bin/node-agent > evidence/product-go-version.txt
-          grep -F 'go1.27.3' evidence/product-go-version.txt >/dev/null
+          grep -F 'go1.27.4' evidence/product-go-version.txt >/dev/null
           grep -F $'build\tCGO_ENABLED=0' evidence/product-go-version.txt >/dev/null
           docker run --rm --entrypoint go -v "$PWD:/work:ro" "$DAPPER_IMAGE" \
             version -m /work/bin/windows/amd64/node-agent.exe > evidence/windows-product-go-version.txt
-          grep -F 'go1.27.3' evidence/windows-product-go-version.txt >/dev/null
+          grep -F 'go1.27.4' evidence/windows-product-go-version.txt >/dev/null
           grep -F $'build\tGOOS=windows' evidence/windows-product-go-version.txt >/dev/null
           for report in evidence/product-go-version.txt evidence/windows-product-go-version.txt; do
             grep -Fx $'\tbuild\tvcs.revision='"$GITHUB_SHA" "$report" >/dev/null
@@ -123,7 +124,7 @@ jobs:
           trap 'rm -rf "$source_tree" "$product_tree"' EXIT
           git archive --format=tar HEAD | tar -xf - -C "$source_tree"
           cp bin/node-agent "$product_tree/node-agent"
-          unzip -p dist/artifacts/node-agent-0.13.35-windows-amd64.zip pasturestack/node-agent.exe > "$product_tree/node-agent.exe"
+          unzip -p dist/artifacts/node-agent-0.13.36-windows-amd64.zip pasturestack/node-agent.exe > "$product_tree/node-agent.exe"
           test -s "$product_tree/node-agent.exe"
           docker run --rm -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image --download-db-only
           docker run --rm -v "$source_tree:/scan:ro" -v "$PWD/evidence:/evidence" \
@@ -216,6 +217,11 @@ jobs:
             -v "$PWD:/work" -w /work -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image \
             --skip-db-update --offline-scan --format cyclonedx \
             --output /work/evidence/runtime.cdx.json "$RUNTIME_IMAGE"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD:/work" -w /work -v "$cache:/root/.cache/trivy" "$TRIVY_IMAGE" image \
+            --skip-db-update --offline-scan --format cyclonedx \
+            --output /work/evidence/backport-stage.cdx.json "$RUNTIME_IMAGE-backports"
+          python3 .github/scripts/verify-official-glibc.py evidence/backport-stage.cdx.json evidence/runtime.cdx.json
           mkdir -p evidence
           consumer_container=$(docker create "$RUNTIME_IMAGE" /bin/true)
           if docker cp "$consumer_container:/usr/share/pasturestack/security/ubuntu-backports" evidence/ubuntu-backports; then
@@ -239,7 +245,7 @@ jobs:
               test "$(grep -Ec '^[0-9a-f]{64}  verify-consumer-evidence\.py$' SHA256SUMS)" -eq 1 && \
               grep -E '^[0-9a-f]{64}  verify-consumer-evidence\.py$' SHA256SUMS | sha256sum --check -)
           python3 evidence/bundle-tools/verify-consumer-evidence.py \
-              --evidence-dir evidence/ubuntu-backports --sbom evidence/runtime.cdx.json \
+              --evidence-dir evidence/ubuntu-backports --sbom evidence/backport-stage.cdx.json \
               --bundle-checksums evidence/bundle-tools/SHA256SUMS \
               --expected-bundle-digest 'sha256:2742a3d429e4e14bc587f6dedc51ded4246cf90bbaedcd86c67d0885e32a6f2a' > evidence/ubuntu-backports-validation.json
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
@@ -341,7 +347,7 @@ jobs:
           docker save "$RUNTIME_IMAGE" | gzip -n > dist/security-runtime/images.tar.gz
           cp evidence/runtime-security.json evidence/runtime-security.effective.json evidence/runtime.cdx.json dist/security-runtime/
           tar -cf dist/security-runtime/ubuntu-backports-evidence.tar -C evidence ubuntu-backports ubuntu-backports-validation.json
-          cp dist/artifacts/node-agent-0.13.35.tar.gz dist/artifacts/node-agent-0.13.35-windows-amd64.zip dist/security-runtime/
+          cp dist/artifacts/node-agent-0.13.36.tar.gz dist/artifacts/node-agent-0.13.36-windows-amd64.zip dist/security-runtime/
           printf '%s\n' "$GITHUB_SHA" > dist/security-runtime/source-revision.txt
           (cd dist/security-runtime && sha256sum -- * > SHA256SUMS)
       - name: Upload exact runtime release bytes
@@ -355,10 +361,10 @@ jobs:
       - name: Retain exact scanned release packages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: node-agent-scanned-0.13.35
+          name: node-agent-scanned-0.13.36
           path: |
-            dist/artifacts/node-agent-0.13.35.tar.gz
-            dist/artifacts/node-agent-0.13.35-windows-amd64.zip
+            dist/artifacts/node-agent-0.13.36.tar.gz
+            dist/artifacts/node-agent-0.13.36-windows-amd64.zip
             dist/artifacts/SHA256SUMS
           if-no-files-found: error
           retention-days: 30

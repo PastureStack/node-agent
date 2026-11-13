@@ -13,7 +13,7 @@ export GOFLAGS=-mod=mod GOWORK=off GOTOOLCHAIN=local CGO_ENABLED=0
 export GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org
 export GOOS=linux GOARCH="${DAPPER_HOST_ARCH:?}"
 case "$GOARCH" in amd64|arm64) ;; *) exit 1 ;; esac
-test "$(go env GOVERSION)" = go1.27.3
+test "$(go env GOVERSION)" = go1.27.4
 test ! -e "$source_dir"
 curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
     --retry 5 --retry-all-errors -o /tmp/pasturestack-buildx.tar.gz \
@@ -96,7 +96,7 @@ binary_sha="$(sha256sum /usr/local/lib/docker/cli-plugins/docker-buildx)"; binar
 printf '%s\t%s\n' schemaVersion 1 upstreamVersion v0.38.1 downstreamVersion "$version" \
     sourceCommit "$source_commit" sourceArchiveSha256 "$source_sha" \
     originalGoModSha256 "$original_mod_sha" updatedGoModSha256 "$updated_mod_sha" \
-    goVersion go1.27.3 goos linux goarch "$GOARCH" binarySha256 "$binary_sha" \
+    goVersion go1.27.4 goos linux goarch "$GOARCH" binarySha256 "$binary_sha" \
     > /licenses/BUILDX-SOURCE.tsv
 cd /
 rm -rf /tmp/pasturestack-buildx-source /tmp/pasturestack-buildx-mod /tmp/pasturestack-buildx-cache \

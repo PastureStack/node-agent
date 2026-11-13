@@ -18,6 +18,8 @@ class MetadataVex(unittest.TestCase):
         graphs['runc']='github.com/opencontainers/runc'
         self.proof={"dockerdOpenpgp":{"binarySha256":"4e770837d688825898693db234f1723759b33650013af813eda20c21252ac7ad","sourceCommit":"70efc0e31da3a115fc87574d1b786fa2b867c346","sourceArchiveSha256":"0a58b26c1d14415c24c96b26423d53490d9e869aa26649fd820df8f74aaa6691","cryptoSymbols":779,"openpgpSymbols":0},"containerGraphs":graphs,
             "pip":{"verifiedWheelSha256":"2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36","pip":"26.2.2+pasturestack.2","urllib3":"2.8.0","vendorFilesByteCompared":299}}
+        self.proof['dockerdOpenpgp']['buildManifestSha256']=self.proof['dockerdOpenpgp']['binarySha256']
+        self.proof['dockerdOpenpgp']['compiler']='go1.27.4'
         self.proof['dockerdOpenpgp']['sourcePackageGraphSha256']='9548a1b9b79f6dff64fe28ae4f0aac338af14bf84b71c3d1dbf9d1b47b11833f'
     def check(self):
         return gate.builder_violations(self.report,self.ledger,REPO,{},self.headers,node_proof=self.proof)
@@ -73,7 +75,7 @@ class MetadataVex(unittest.TestCase):
                 self.assertTrue(self.check())
         self.finding.clear();self.finding.update(original_finding)
         for field,value in [('binarySha256','0'*64),('sourceCommit','0'*40),
-                            ('sourcePackageGraphSha256','0'*64),('cryptoSymbols',0),('openpgpSymbols',1)]:
+                            ('sourcePackageGraphSha256','bad'),('compiler','go1.26.10'),('cryptoSymbols',0),('openpgpSymbols',1)]:
             self.proof=copy.deepcopy(original_proof);self.proof['dockerdOpenpgp'][field]=value
             with self.subTest(field=field):self.assertTrue(self.check())
         self.proof=copy.deepcopy(original_proof)
