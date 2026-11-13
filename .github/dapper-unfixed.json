@@ -1067,6 +1067,226 @@
       "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/28d50cac38ffe058a044db97525174487ff9f67d/osv/cve/2026/UBUNTU-CVE-2026-78408.json",
       "reason": "Canonical OSV lists the exact Ubuntu 26.04 util-linux binary without a fixed range endpoint.",
       "checkedAt": "2026-11-13"
+    },
+    {
+      "package": "binutils",
+      "purl": "pkg:deb/ubuntu/binutils@2.46-3ubuntu2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2025-66863",
+      "severity": "LOW",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "2.46-3ubuntu2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2025/UBUNTU-CVE-2025-66863.json"
+    },
+    {
+      "package": "binutils-common",
+      "purl": "pkg:deb/ubuntu/binutils-common@2.46-3ubuntu2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2025-66863",
+      "severity": "LOW",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "2.46-3ubuntu2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2025/UBUNTU-CVE-2025-66863.json"
+    },
+    {
+      "package": "binutils-x86-64-linux-gnu",
+      "purl": "pkg:deb/ubuntu/binutils-x86-64-linux-gnu@2.46-3ubuntu2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2025-66863",
+      "severity": "LOW",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "2.46-3ubuntu2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2025/UBUNTU-CVE-2025-66863.json"
+    },
+    {
+      "package": "libbinutils",
+      "purl": "pkg:deb/ubuntu/libbinutils@2.46-3ubuntu2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2025-66863",
+      "severity": "LOW",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "2.46-3ubuntu2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2025/UBUNTU-CVE-2025-66863.json"
+    },
+    {
+      "package": "libctf-nobfd0",
+      "purl": "pkg:deb/ubuntu/libctf-nobfd0@2.46-3ubuntu2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2025-66863",
+      "severity": "LOW",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "2.46-3ubuntu2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2025/UBUNTU-CVE-2025-66863.json"
+    },
+    {
+      "package": "libctf0",
+      "purl": "pkg:deb/ubuntu/libctf0@2.46-3ubuntu2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2025-66863",
+      "severity": "LOW",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "2.46-3ubuntu2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2025/UBUNTU-CVE-2025-66863.json"
+    },
+    {
+      "package": "libgprofng0",
+      "purl": "pkg:deb/ubuntu/libgprofng0@2.46-3ubuntu2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2025-66863",
+      "severity": "LOW",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "2.46-3ubuntu2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2025/UBUNTU-CVE-2025-66863.json"
+    },
+    {
+      "package": "libsframe3",
+      "purl": "pkg:deb/ubuntu/libsframe3@2.46-3ubuntu2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2025-66863",
+      "severity": "LOW",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "2.46-3ubuntu2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2025/UBUNTU-CVE-2025-66863.json"
+    },
+    {
+      "package": "libpython3.14-minimal",
+      "purl": "pkg:deb/ubuntu/libpython3.14-minimal@3.14.4-1ubuntu0.2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-0864",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "3.14.4-1ubuntu0.2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-0864.json"
+    },
+    {
+      "package": "libpython3.14-stdlib",
+      "purl": "pkg:deb/ubuntu/libpython3.14-stdlib@3.14.4-1ubuntu0.2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-0864",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "3.14.4-1ubuntu0.2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-0864.json"
+    },
+    {
+      "package": "python3.14",
+      "purl": "pkg:deb/ubuntu/python3.14@3.14.4-1ubuntu0.2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-0864",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "3.14.4-1ubuntu0.2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-0864.json"
+    },
+    {
+      "package": "python3.14-minimal",
+      "purl": "pkg:deb/ubuntu/python3.14-minimal@3.14.4-1ubuntu0.2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-0864",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "3.14.4-1ubuntu0.2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-0864.json"
+    },
+    {
+      "package": "python3.14-venv",
+      "purl": "pkg:deb/ubuntu/python3.14-venv@3.14.4-1ubuntu0.2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-0864",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "3.14.4-1ubuntu0.2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-0864.json"
+    },
+    {
+      "package": "linux-libc-dev",
+      "purl": "pkg:deb/ubuntu/linux-libc-dev@7.0.0-43.43?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-100080",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "7.0.0-43.43",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-100080.json"
+    },
+    {
+      "package": "linux-libc-dev",
+      "purl": "pkg:deb/ubuntu/linux-libc-dev@7.0.0-43.43?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-100081",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "7.0.0-43.43",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-100081.json"
+    },
+    {
+      "package": "linux-libc-dev",
+      "purl": "pkg:deb/ubuntu/linux-libc-dev@7.0.0-43.43?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-100082",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "7.0.0-43.43",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-100082.json"
+    },
+    {
+      "package": "libexpat1",
+      "purl": "pkg:deb/ubuntu/libexpat1@2.7.4-1ubuntu0.2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-102633",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "2.7.4-1ubuntu0.2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-102633.json"
+    },
+    {
+      "package": "rust-coreutils",
+      "purl": "pkg:deb/ubuntu/rust-coreutils@0.10.0-1ubuntu2~26.04.1?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-35370",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "0.10.0-1ubuntu2~26.04.1",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-35370.json"
+    },
+    {
+      "package": "rust-coreutils",
+      "purl": "pkg:deb/ubuntu/rust-coreutils@0.10.0-1ubuntu2~26.04.1?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-35371",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "0.10.0-1ubuntu2~26.04.1",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-35371.json"
+    },
+    {
+      "package": "libexpat1",
+      "purl": "pkg:deb/ubuntu/libexpat1@2.7.4-1ubuntu0.2?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-13",
+      "status": "no_official_fix",
+      "id": "CVE-2026-93990",
+      "severity": "MEDIUM",
+      "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
+      "version": "2.7.4-1ubuntu0.2",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-93990.json"
     }
   ]
 }
