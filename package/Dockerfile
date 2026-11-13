@@ -67,8 +67,11 @@ RUN set -eu; \
         test "$(dpkg-query -W -f='${Version}' "$package")" = 3.5.5-1ubuntu3.7; \
         rm -f "/tmp/${package}.deb"; \
     done
-RUN sh /usr/local/libexec/pasturestack/install-ubuntu-security-updates \
-        /licenses/ubuntu-security-packages.lock /etc/ssl/certs/ca-certificates.crt
+RUN set -eux; \
+    sed '/^libc.*=2.43-2ubuntu2.4$/d' /licenses/ubuntu-security-packages.lock > /tmp/runtime-security.lock; \
+    UBUNTU_SECURITY_ARCHIVE=https://archive.ubuntu.com/ubuntu sh /usr/local/libexec/pasturestack/install-ubuntu-security-updates \
+        /tmp/runtime-security.lock /etc/ssl/certs/ca-certificates.crt; \
+    rm -f /tmp/runtime-security.lock
 COPY node-agent /usr/bin/
 # Install qualified backports only for packages already in this runtime.
 # The immutable read-only build mount adds no installer or interpreter to it.
