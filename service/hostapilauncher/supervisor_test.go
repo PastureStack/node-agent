@@ -9,12 +9,12 @@ import (
 )
 
 func TestProducerVersionIsExactAndBounded(t *testing.T) {
-	for _, version := range []string{"0.38.9", "0.38.9\n"} {
+	for _, version := range []string{"0.38.10", "0.38.10\n"} {
 		if !validVersion(version) {
 			t.Fatal("current producer rejected")
 		}
 	}
-	for _, version := range []string{"0.38.4", "0.38.5", "0.38.6", "0.38.7", "0.38.8", "0.38.10", "0.39.0", "0.038.9", "v0.38.9", "0.38.9-dirty", "0.38.9\r\n", "0.38.9\nextra", "0.38.9\n0.38.9", ""} {
+	for _, version := range []string{"0.38.4", "0.38.5", "0.38.6", "0.38.7", "0.38.8", "0.38.9", "0.39.0", "0.038.10", "v0.38.10", "0.38.10-dirty", "0.38.10\r\n", "0.38.10\nextra", "0.38.10\n0.38.9", ""} {
 		if validVersion(version) {
 			t.Fatal("incompatible producer accepted")
 		}
