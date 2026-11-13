@@ -41,7 +41,7 @@ jobs:
           grep -Fq 'VERSION_OVERRIDE: v0.13.36' .github/workflows/validate.yml
           grep -Fq 'SHA256SUMS' scripts/package
           grep -Fq 'bash scripts/verify-package "$linux_asset"' .github/workflows/validate.yml
-          grep -Fq 'bash scripts/verify-package dist/artifacts/node-agent-0.13.35.tar.gz' .github/workflows/security-release-gate.yml
+          grep -Fq 'bash scripts/verify-package dist/artifacts/node-agent-0.13.36.tar.gz' .github/workflows/security-release-gate.yml
 
       - name: Install the release Go toolchain
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
