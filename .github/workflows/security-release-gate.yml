@@ -70,18 +70,18 @@ jobs:
           CROSS=1 VERSION_OVERRIDE="$VERSION_OVERRIDE" make DAPPER_IMAGE="$DAPPER_IMAGE" ci
           make DAPPER_IMAGE="$DAPPER_IMAGE" IMAGE_NAME=pasturestack/node-agent \
             TAG=v0.13.36 VERSION_OVERRIDE="$VERSION_OVERRIDE" package-image
-          test -s dist/artifacts/node-agent-0.13.35.tar.gz
+          test -s dist/artifacts/node-agent-0.13.36.tar.gz
           test -s dist/artifacts/node-agent-0.13.36-windows-amd64.zip
           test "$(cat dist/image)" = "$RUNTIME_IMAGE"
-          gzip -t dist/artifacts/node-agent-0.13.35.tar.gz
-          bash scripts/verify-package dist/artifacts/node-agent-0.13.35.tar.gz
+          gzip -t dist/artifacts/node-agent-0.13.36.tar.gz
+          bash scripts/verify-package dist/artifacts/node-agent-0.13.36.tar.gz
           unzip -t dist/artifacts/node-agent-0.13.36-windows-amd64.zip
           (
             cd dist/artifacts
-            sha256sum node-agent-0.13.35.tar.gz node-agent-0.13.36-windows-amd64.zip > SHA256SUMS
+            sha256sum node-agent-0.13.36.tar.gz node-agent-0.13.36-windows-amd64.zip > SHA256SUMS
             sha256sum -c SHA256SUMS
           )
-          sha256sum dist/artifacts/node-agent-0.13.35.tar.gz \
+          sha256sum dist/artifacts/node-agent-0.13.36.tar.gz \
             dist/artifacts/node-agent-0.13.36-windows-amd64.zip \
             bin/node-agent bin/windows/amd64/node-agent.exe > evidence/product-artifacts.sha256
           docker image inspect "$RUNTIME_IMAGE" > evidence/runtime-image-inspect.json
@@ -341,7 +341,7 @@ jobs:
           docker save "$RUNTIME_IMAGE" | gzip -n > dist/security-runtime/images.tar.gz
           cp evidence/runtime-security.json evidence/runtime-security.effective.json evidence/runtime.cdx.json dist/security-runtime/
           tar -cf dist/security-runtime/ubuntu-backports-evidence.tar -C evidence ubuntu-backports ubuntu-backports-validation.json
-          cp dist/artifacts/node-agent-0.13.35.tar.gz dist/artifacts/node-agent-0.13.36-windows-amd64.zip dist/security-runtime/
+          cp dist/artifacts/node-agent-0.13.36.tar.gz dist/artifacts/node-agent-0.13.36-windows-amd64.zip dist/security-runtime/
           printf '%s\n' "$GITHUB_SHA" > dist/security-runtime/source-revision.txt
           (cd dist/security-runtime && sha256sum -- * > SHA256SUMS)
       - name: Upload exact runtime release bytes
@@ -357,7 +357,7 @@ jobs:
         with:
           name: node-agent-scanned-0.13.36
           path: |
-            dist/artifacts/node-agent-0.13.35.tar.gz
+            dist/artifacts/node-agent-0.13.36.tar.gz
             dist/artifacts/node-agent-0.13.36-windows-amd64.zip
             dist/artifacts/SHA256SUMS
           if-no-files-found: error

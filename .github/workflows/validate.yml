@@ -75,7 +75,7 @@ jobs:
               exit 1
               ;;
           esac
-          linux_asset="dist/artifacts/node-agent-0.13.35.tar.gz"
+          linux_asset="dist/artifacts/node-agent-0.13.36.tar.gz"
           windows_asset="dist/artifacts/node-agent-0.13.36-windows-amd64.zip"
           test -s "$linux_asset"
           test -s "$windows_asset"
@@ -92,7 +92,7 @@ jobs:
           (
             cd dist/artifacts
             sha256sum \
-              node-agent-0.13.35.tar.gz \
+              node-agent-0.13.36.tar.gz \
               node-agent-0.13.36-windows-amd64.zip >SHA256SUMS
             sha256sum -c SHA256SUMS
           )
@@ -104,7 +104,7 @@ jobs:
         with:
           name: node-agent-0.13.36
           path: |
-            dist/artifacts/node-agent-0.13.35.tar.gz
+            dist/artifacts/node-agent-0.13.36.tar.gz
             dist/artifacts/node-agent-0.13.36-windows-amd64.zip
             dist/artifacts/SHA256SUMS
           if-no-files-found: error
