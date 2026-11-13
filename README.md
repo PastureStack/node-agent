@@ -1,6 +1,6 @@
 # PastureStack Node Agent
 
-The published Linux runtime **`v0.13.35`** requires exactly Host API **`0.38.9`**. Its immutable image and Linux/Windows packages come from the same successful [security and package CI](https://github.com/PastureStack/node-agent/actions/runs/42416721086). Matching Server 584 deployment acceptance is pending.
+The published Linux runtime **`v0.13.37`** requires Host API **`0.38.10`**. The Linux and Windows packages and OCI image were built with Go 1.27.4 and verified by the [release pipeline](https://github.com/PastureStack/node-agent/actions/runs/43355589004).
 
 The runtime integrates shared Ubuntu 26.04 security backports for already-installed packages while preserving the selected coreutils provider.
 
@@ -14,7 +14,7 @@ PastureStack is an independent community effort to preserve, audit, and moderniz
 
 ## Project status
 
-This is a migration proof of concept. The existing Ubuntu 26.04, modern Docker test harness, runtime hardening, and dependency maintenance are retained, with the compiler updated to checksum-pinned Go 1.27.3. Product-owned import paths, binaries, archives, images, Windows service names, and operator messages use PastureStack naming. Python test dependencies are fully pinned and cached in the disposable build image so clean-checkout tests do not depend on live PyPI availability. GitHub Actions runs repository validation and security checks. Release packaging remains manual, and no automatic production deployment is enabled.
+This is a migration proof of concept. The existing Ubuntu 26.04, modern Docker test harness, runtime hardening, and dependency maintenance are retained, with the compiler updated to checksum-pinned Go 1.27.4. Product-owned import paths, binaries, archives, images, Windows service names, and operator messages use PastureStack naming. Python test dependencies are fully pinned and cached in the disposable build image so clean-checkout tests do not depend on live PyPI availability. GitHub Actions runs repository validation and security checks. Release packaging remains manual, and no automatic production deployment is enabled.
 
 ## Configuration
 
@@ -28,12 +28,12 @@ From a Docker-capable Linux host:
 make test
 make build
 make package
-make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.35
+make package-image IMAGE_NAME=pasturestack/node-agent TAG=v0.13.37
 ```
 
 Packaging is local only and does not push an image. See [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY.md](SECURITY.md), and [ORIGIN.md](ORIGIN.md).
 
-The recipe packages version `0.13.35`. Verify the [published assets](https://github.com/PastureStack/node-agent/releases/tag/v0.13.35)
+The recipe packages version `0.13.37`. Verify the [published assets](https://github.com/PastureStack/node-agent/releases/tag/v0.13.37)
 using their SHA-256 checksums. Published tags and assets
 remain immutable; later documentation commits do not change their producer identity.
 The outer bootstrap image version and the Go package version are separate identities.
@@ -44,7 +44,7 @@ client 0.5, gopsutil v4.26, mapstructure v2.5, netlink v1.3, and netns v0.0.5.
 The retired AWS SDK v1, Aliyungo, root Docker module, GOPATH/Godeps, and Trash
 dependency paths are not part of the build.
 
-`VERSION_OVERRIDE=v0.13.35 make package` produces the Linux asset `node-agent-0.13.35.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release must pass this repository's normal publication and byte verification before Server can embed that archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
+`VERSION_OVERRIDE=v0.13.37 make package` produces the Linux asset `node-agent-0.13.37.tar.gz`. The archive carries the legacy SHA-1 and current SHA-256 manifests required by the authenticated configcontent installer. The producer release must pass this repository's normal publication and byte verification before Server can embed that archive and distribute it through the existing configuration channel. Component publication and matching Server acceptance are separate evidence boundaries.
 
 Upgrade existing Linux hosts through that established configcontent/pyagent
 sequence, installing the compatible Host API package before Node. Keep the
@@ -52,9 +52,9 @@ existing platform-home data volume and Host ID; do not register a replacement
 host or create a replacement state volume. Read the installed Node version with
 `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/node-agent/node-agent --version`;
 after installing this Linux version, the expected result is
-`node-agent version v0.13.35`.
+`node-agent version v0.13.37`.
 
-On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.9` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
+On Linux, Node supervises the separately maintained `host-api` producer at `${PASTURESTACK_HOME:-${CATTLE_HOME:-/var/lib/pasturestack}}/bin/host-api`. Host API `0.38.10` must be installed before the Node package by the existing `pyagent` package sequence. Node verifies its exact version, forwards the current agent/host identity only through process environment, restarts an exited child, and binds its lifetime to Node. Missing or incompatible producers never fall back to the embedded legacy Host API. Stream authorization, target binding, and private durable terminal evidence remain owned by the Host API producer.
 
 Windows retains the existing embedded compatibility path; this Linux image preparation does not rebuild or revalidate the separately pinned Windows runtime or provide Windows stream delegation or durable terminal evidence support. A replacement Windows bootstrap image and upgrade/rollback tests are still required before Windows hosts are supported. The Server recipe independently pins its Windows artifact; a Linux package publication and CI cross-builds do not establish new Windows runtime acceptance.
 
@@ -76,7 +76,7 @@ The inherited project remains licensed under [Apache License 2.0](LICENSE). Copy
 
 ## October 2026 security maintenance
 
-Maintained Go builds select the patched Go 1.27.3 compiler without raising the existing Go language requirement. Ubuntu build/runtime stages apply the checksum-pinned `ca-certificates 20260816ubuntu0.26.04.1` security package after their frozen APT baseline; the final trust store and installed version are verified. Python tooling uses the patched pip/CA path; CI interpreter pins remain on the Python 3.14 series. Release artifacts must pass the repository's existing checks before publication.
+Maintained Go builds select the patched Go 1.27.4 compiler without raising the existing Go language requirement. Ubuntu build/runtime stages apply the checksum-pinned `ca-certificates 20260816ubuntu0.26.04.2` security package after their frozen APT baseline; the final trust store and installed version are verified. Python tooling uses the patched pip/CA path; CI interpreter pins remain on the Python 3.14 series. Release artifacts must pass the repository's existing checks before publication.
 # Python installer security rebuild
 
 The disposable Dapper image rebuilds pip `26.2.2+pasturestack.2` from checksum-pinned official inputs using upstream vendoring and the original urllib3 patches. urllib3 uses released `2.8.0` and msgpack uses released `1.2.3`; this is a local security rebuild, not a new official PyPA release. The expected wheel SHA-256 is `2aef7c341eef310645ab56455f5789de2819463b25fa70151954e1d208d2db36`. Ubuntu's Python ABI is retained. The image tests live pip, available ensurepip/new-venv seeds, virtualenv, streaming limits, and trusted/untrusted TLS. See `scripts/pip-security/README.md` for source and license evidence.
@@ -115,7 +115,7 @@ The Dapper scan retains all severities and requires nonempty package analysis fo
 The disposable builder uses official Docker 29.9.3 CLI/daemon bytes, with its
 supported Go 1.26.10 compiler, rather than Ubuntu's outdated embedded Go tools.
 Containerd stays on the 2.2 compatibility branch at 2.2.10 and runc stays on 1.4
-at 1.4.3; both are rebuilt from SHA-pinned released sources using Go 1.27.3 and
+at 1.4.3; both are rebuilt from SHA-pinned released sources using Go 1.27.4 and
 released security-fixed dependencies. Runc retains seccomp. Containerd
 uses released imgcrypt 2.0.3 / ocicrypt 1.3.2 to retain encrypted-image PGP
 support through the maintained ProtonMail implementation; CI tests that wrapper
