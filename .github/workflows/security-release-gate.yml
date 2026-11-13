@@ -37,7 +37,7 @@ jobs:
           git merge-base --is-ancestor 73e3a7c5f438dbda42c4078885a66e6f156aa731 HEAD
           mkdir -p evidence
           git rev-parse HEAD > evidence/source-revision.txt
-          sha256sum Dockerfile.dapper package/Dockerfile tests/requirements.lock \
+          sha256sum Makefile Dockerfile.dapper package/Dockerfile tests/requirements.lock \
             scripts/package scripts/package-image scripts/verify-package .github/scripts/verify-official-glibc.py \
             .github/workflows/codeql-verification.yml \
             .github/workflows/security-release-gate.yml \
@@ -73,6 +73,7 @@ jobs:
           test -s dist/artifacts/node-agent-0.13.36.tar.gz
           test -s dist/artifacts/node-agent-0.13.36-windows-amd64.zip
           test "$(cat dist/image)" = "$RUNTIME_IMAGE"
+          docker image inspect "$RUNTIME_IMAGE-backports" --format "{{.Id}}" >/dev/null
           gzip -t dist/artifacts/node-agent-0.13.36.tar.gz
           bash scripts/verify-package dist/artifacts/node-agent-0.13.36.tar.gz
           unzip -t dist/artifacts/node-agent-0.13.36-windows-amd64.zip
