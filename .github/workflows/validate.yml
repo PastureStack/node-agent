@@ -52,6 +52,30 @@ jobs:
           git diff --cached --binary --full-index -- go.mod go.sum vendor > ../evidence/otel147.patch
           git diff --cached --stat -- go.mod go.sum vendor > ../evidence/otel147.stat
           test -s ../evidence/otel147.patch
+      - name: Resolve the Buildx Go module evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 5 https://codeload.github.com/docker/buildx/tar.gz/0dbe87f36ed472fe36b6796c3f70b4210a731fc5 -o "$RUNNER_TEMP/buildx.tgz"
+          echo "c5c810b083ed3725f7d4299ba01505b5891d164cf81c3398ea4c3b27a3b71149  $RUNNER_TEMP/buildx.tgz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/buildx"
+          tar -xzf "$RUNNER_TEMP/buildx.tgz" --strip-components=1 -C "$RUNNER_TEMP/buildx"
+          out="$GITHUB_WORKSPACE/evidence"
+          cd "$RUNNER_TEMP/buildx"
+          echo 'a93029abb94e88ddaa532ddeaab4802259a1025408f1eac417a9886e140067ef  go.mod' | sha256sum -c -
+          export GOFLAGS=-mod=mod CGO_ENABLED=0
+          go list -m all > "$out/buildx-before.txt"
+          go get golang.org/x/net@v0.62.0 github.com/moby/go-archive@v0.3.0
+          go get github.com/klauspost/compress@v1.20.2
+          echo '8c502e42f21c8558e9e900eb1a231adbdd819f74324834ee18f6d38eb64394c1  go.mod' | sha256sum -c -
+          go get go.opentelemetry.io/otel@v1.47.0 \
+            go.opentelemetry.io/otel/metric@v1.47.0 \
+            go.opentelemetry.io/otel/trace@v1.47.0 \
+            go.opentelemetry.io/otel/sdk@v1.47.0 \
+            go.opentelemetry.io/otel/sdk/metric@v1.47.0
+          go list -m all > "$out/buildx-after.txt"
+          sha256sum go.mod > "$out/buildx-mod-sha.txt"
+          diff -U 0 "$out/buildx-before.txt" "$out/buildx-after.txt" > "$out/buildx-modules.diff" || test "$?" = 1
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: node-agent-otel147-vendor-patch
