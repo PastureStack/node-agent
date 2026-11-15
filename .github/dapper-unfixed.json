@@ -1287,6 +1287,50 @@
       "reason": "Canonical Ubuntu 26.04 OSV lists this exact installed binary package without a fixed version. Verified against the original Dapper report for run 43348507878.",
       "version": "2.7.4-1ubuntu0.2",
       "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/1820a9703253548155e22e8d0b31facddb88cfb1/osv/cve/2026/UBUNTU-CVE-2026-93990.json"
+    },
+    {
+      "package": "libsystemd-shared",
+      "purl": "pkg:deb/ubuntu/libsystemd-shared@259.5-0ubuntu3.4?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-15",
+      "status": "no_official_fix",
+      "id": "CVE-2026-121876",
+      "severity": "MEDIUM",
+      "reason": "Canonical marks Resolute systemd vulnerable, fix deferred. Official OSV SHA-256 e2f27bf17f02780a725bfce7491bf006b9af973761ef2337a1ac9ec06d4f5b01 lists no released fix. Dapper scan 43716713562 retains this exact binary package finding for tracking.",
+      "version": "259.5-0ubuntu3.4",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/dd17a57526859cf8505026729bf015fc2411a952/osv/cve/2026/UBUNTU-CVE-2026-121876.json"
+    },
+    {
+      "package": "libsystemd0",
+      "purl": "pkg:deb/ubuntu/libsystemd0@259.5-0ubuntu3.4?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-15",
+      "status": "no_official_fix",
+      "id": "CVE-2026-121876",
+      "severity": "MEDIUM",
+      "reason": "Canonical marks Resolute systemd vulnerable, fix deferred. Official OSV SHA-256 e2f27bf17f02780a725bfce7491bf006b9af973761ef2337a1ac9ec06d4f5b01 lists no released fix. Dapper scan 43716713562 retains this exact binary package finding for tracking.",
+      "version": "259.5-0ubuntu3.4",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/dd17a57526859cf8505026729bf015fc2411a952/osv/cve/2026/UBUNTU-CVE-2026-121876.json"
+    },
+    {
+      "package": "libudev1",
+      "purl": "pkg:deb/ubuntu/libudev1@259.5-0ubuntu3.4?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-15",
+      "status": "no_official_fix",
+      "id": "CVE-2026-121876",
+      "severity": "MEDIUM",
+      "reason": "Canonical marks Resolute systemd vulnerable, fix deferred. Official OSV SHA-256 e2f27bf17f02780a725bfce7491bf006b9af973761ef2337a1ac9ec06d4f5b01 lists no released fix. Dapper scan 43716713562 retains this exact binary package finding for tracking.",
+      "version": "259.5-0ubuntu3.4",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/dd17a57526859cf8505026729bf015fc2411a952/osv/cve/2026/UBUNTU-CVE-2026-121876.json"
+    },
+    {
+      "package": "systemd",
+      "purl": "pkg:deb/ubuntu/systemd@259.5-0ubuntu3.4?arch=amd64&distro=ubuntu-26.04",
+      "checkedAt": "2026-11-15",
+      "status": "no_official_fix",
+      "id": "CVE-2026-121876",
+      "severity": "MEDIUM",
+      "reason": "Canonical marks Resolute systemd vulnerable, fix deferred. Official OSV SHA-256 e2f27bf17f02780a725bfce7491bf006b9af973761ef2337a1ac9ec06d4f5b01 lists no released fix. Dapper scan 43716713562 retains this exact binary package finding for tracking.",
+      "version": "259.5-0ubuntu3.4",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/dd17a57526859cf8505026729bf015fc2411a952/osv/cve/2026/UBUNTU-CVE-2026-121876.json"
     }
   ]
 }

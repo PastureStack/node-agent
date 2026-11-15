@@ -16,12 +16,21 @@ NAME_FILE = 'module/github.com/docker/docker@v28.5.2+incompatible/pkg/namesgener
 NAME_SHA = 'cd2f9528ad47ae7519d78e6381e0b2313fa9b5ff541814e95e06ebb187aa9b64'
 PINS = {
     'schemaVersion': '1', 'upstreamVersion': 'v0.38.1',
-    'downstreamVersion': 'v0.38.1-pasturestack.2',
+    'downstreamVersion': 'v0.38.1-pasturestack.3',
     'sourceCommit': '0dbe87f36ed472fe36b6796c3f70b4210a731fc5',
     'sourceArchiveSha256': 'c5c810b083ed3725f7d4299ba01505b5891d164cf81c3398ea4c3b27a3b71149',
     'originalGoModSha256': 'a93029abb94e88ddaa532ddeaab4802259a1025408f1eac417a9886e140067ef',
-    'updatedGoModSha256': '8c502e42f21c8558e9e900eb1a231adbdd819f74324834ee18f6d38eb64394c1',
+    'updatedGoModSha256': 'df111e2b1a93c59d54dcdb60ea0b7d0e87f6b7af169c3eb6b571c880e403bfdc',
     'goVersion': 'go1.27.4', 'goos': 'linux',
+}
+OTEL_TRANSITIONS = {
+    'go.opentelemetry.io/otel': ('v1.46.0', 'v1.47.0'),
+    'go.opentelemetry.io/otel/log': (None, 'v1.47.0'),
+    'go.opentelemetry.io/otel/metric': ('v1.46.0', 'v1.47.0'),
+    'go.opentelemetry.io/otel/metric/x': ('v0.68.0', 'v0.69.0'),
+    'go.opentelemetry.io/otel/sdk': ('v1.46.0', 'v1.47.0'),
+    'go.opentelemetry.io/otel/sdk/metric': ('v1.46.0', 'v1.47.0'),
+    'go.opentelemetry.io/otel/trace': ('v1.46.0', 'v1.47.0'),
 }
 IDS = {'GO-2026-5617', 'GO-2026-5746', 'GO-2026-6253', 'GO-2026-6611'}
 OSV_PINS = {
@@ -108,11 +117,13 @@ def source_check(data):
             'Namesgenerator source bytes do not match the official module')
     before, after = data['modulesBefore'].splitlines(), data['modulesAfter'].splitlines()
     transitions = {'github.com/klauspost/compress': ('v1.20.1', 'v1.20.2'), 'github.com/moby/go-archive': ('v0.2.0', 'v0.3.0'), 'golang.org/x/crypto': ('v0.57.0', 'v0.58.0'), 'golang.org/x/net': ('v0.59.0', 'v0.62.0'), 'golang.org/x/sync': ('v0.23.0', 'v0.24.0'), 'golang.org/x/sys': ('v0.48.0', 'v0.49.0'), 'golang.org/x/telemetry': ('v0.0.0-20260811182544-a038080d80e5', 'v0.0.0-20260924152758-ed294f943157'), 'golang.org/x/term': ('v0.46.0', 'v0.47.0'), 'golang.org/x/text': ('v0.42.0', 'v0.43.0'), 'golang.org/x/tools': ('v0.49.0', 'v0.51.0')}
+    transitions.update(OTEL_TRANSITIONS)
     changed = tuple(name + ' ' for name in transitions)
     require([s for s in before if not s.startswith(changed)] == [s for s in after if not s.startswith(changed)],
             'Unrelated module version changed')
     for module, (old, new) in transitions.items():
-        require([s for s in before if s.startswith(module + ' ')] == [module + ' ' + old]
+        expected_before = [] if old is None else [module + ' ' + old]
+        require([s for s in before if s.startswith(module + ' ')] == expected_before
                 and [s for s in after if s.startswith(module + ' ')] == [module + ' ' + new], 'Wrong fixed module version')
     info = data['buildInfo'].splitlines()
     require(info and info[0].endswith(': go1.27.4'), 'Actual binary has a different compiler')
@@ -131,6 +142,9 @@ def source_check(data):
                                             'github.com/docker/docker': 'v28.5.2+incompatible',
                                             'golang.org/x/crypto': 'v0.58.0', 'golang.org/x/sys': 'v0.49.0',
                                             'golang.org/x/term': 'v0.47.0', 'golang.org/x/text': 'v0.43.0', 'github.com/klauspost/compress': 'v1.20.2'}.items()), 'Actual binary module identity changed')
+    require(all(deps.get(module) == OTEL_TRANSITIONS[module][1] for module in
+                ('go.opentelemetry.io/otel', 'go.opentelemetry.io/otel/sdk', 'go.opentelemetry.io/otel/trace')),
+            'Actual binary OpenTelemetry module identity changed')
     require(f"github.com/docker/buildx {PINS['downstreamVersion']} {PINS['sourceCommit']}" in data['version'], 'Wrong downstream tool identity')
     require(set(data['osvInputs']) == IDS and all(sha(data['osvInputs'][k]) == v for k, v in OSV_PINS.items()),
             'Canonical four vulnerability input bytes do not match their official pins')

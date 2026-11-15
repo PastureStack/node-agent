@@ -200,6 +200,28 @@
       "checkedAt": "2026-10-23"
     },
     {
+      "severity": "MEDIUM",
+      "package": "libsystemd0",
+      "id": "CVE-2026-121876",
+      "purl": "pkg:deb/ubuntu/libsystemd0@259.5-0ubuntu3.4?arch=amd64&distro=ubuntu-26.04",
+      "version": "259.5-0ubuntu3.4",
+      "status": "no_official_fix",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/dd17a57526859cf8505026729bf015fc2411a952/osv/cve/2026/UBUNTU-CVE-2026-121876.json",
+      "reason": "Canonical marks Ubuntu 26.04 systemd vulnerable, fix deferred. Official OSV SHA-256 e2f27bf17f02780a725bfce7491bf006b9af973761ef2337a1ac9ec06d4f5b01 lists no released Resolute fix. The native Node Agent runtime scan retains this exact binary package finding for tracking.",
+      "checkedAt": "2026-11-15"
+    },
+    {
+      "severity": "MEDIUM",
+      "package": "libudev1",
+      "id": "CVE-2026-121876",
+      "purl": "pkg:deb/ubuntu/libudev1@259.5-0ubuntu3.4?arch=amd64&distro=ubuntu-26.04",
+      "version": "259.5-0ubuntu3.4",
+      "status": "no_official_fix",
+      "officialEvidence": "https://raw.githubusercontent.com/canonical/ubuntu-security-notices/dd17a57526859cf8505026729bf015fc2411a952/osv/cve/2026/UBUNTU-CVE-2026-121876.json",
+      "reason": "Canonical marks Ubuntu 26.04 systemd vulnerable, fix deferred. Official OSV SHA-256 e2f27bf17f02780a725bfce7491bf006b9af973761ef2337a1ac9ec06d4f5b01 lists no released Resolute fix. The native Node Agent runtime scan retains this exact binary package finding for tracking.",
+      "checkedAt": "2026-11-15"
+    },
+    {
       "severity": "LOW",
       "package": "login.defs",
       "id": "CVE-2024-56433",
